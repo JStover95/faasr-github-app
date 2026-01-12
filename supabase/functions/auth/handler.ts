@@ -14,8 +14,8 @@ import {
   getInstallationToken,
 } from "../_shared/github-app.ts";
 import { ensureForkExists } from "../_shared/repository.ts";
-import { Octokit } from "../_shared/deps.ts";
 import { getConfig } from "./config.ts";
+import { createSupabaseClient } from "../_shared/supabase-client.ts";
 
 /**
  * Services object for dependency injection and testing
@@ -26,10 +26,12 @@ export const deps = {
   checkInstallationPermissions,
   getInstallationToken,
   ensureForkExists,
+  createSupabaseClient,
 };
 
 /**
  * Handle GET /auth/install - Initiate GitHub App installation
+ * This redirects the user to the GitHub App installation page.
  */
 export function handleInstall(req: Request): Response {
   const startTime = Date.now();
@@ -65,6 +67,7 @@ export function handleInstall(req: Request): Response {
   githubInstallUrl.searchParams.set("state", "install");
 
   const duration = Date.now() - startTime;
+
   console.log("[AUTH] Install redirect generated", {
     redirectUrl: githubInstallUrl.toString(),
     duration: `${duration}ms`,
@@ -87,6 +90,7 @@ export function handleInstall(req: Request): Response {
 
 /**
  * Handle GET /auth/callback - Handle GitHub App installation callback
+ * This handles the GitHub App installation callback.
  */
 export async function handleCallback(req: Request): Promise<Response> {
   const startTime = Date.now();
@@ -106,6 +110,7 @@ export async function handleCallback(req: Request): Promise<Response> {
   try {
     if (!installationId) {
       console.warn("[AUTH] Callback failed: Missing installation_id parameter");
+
       const redirectUrl = new URL("/install", getConfig().frontendUrl);
       redirectUrl.searchParams.set("error", "missing_installation_id");
       redirectUrl.searchParams.set(
@@ -128,6 +133,7 @@ export async function handleCallback(req: Request): Promise<Response> {
       getConfig().githubPrivateKey,
       installationId,
     );
+
     console.log("[AUTH] Installation retrieved", {
       installationId,
       accountLogin: installation.account.login,
@@ -150,8 +156,10 @@ export async function handleCallback(req: Request): Promise<Response> {
         installationId,
         missingPermissions: permissionCheck.missingPermissions,
       });
+
       const frontendUrl = getConfig().frontendUrl;
       const redirectUrl = new URL("/install", frontendUrl);
+
       redirectUrl.searchParams.set("error", "missing_permissions");
       redirectUrl.searchParams.set(
         "message",
@@ -165,37 +173,26 @@ export async function handleCallback(req: Request): Promise<Response> {
         },
       });
     }
+
     console.log("[AUTH] Permissions validated successfully", {
       installationId,
     });
 
-    console.log("[AUTH] Getting installation token", { installationId });
-
-    // Get installation token for API operations
-    const { token } = await deps.getInstallationToken(
-      getConfig().githubAppId,
-      getConfig().githubPrivateKey,
+    console.log("[AUTH] Inserting installation_id into public.profiles", {
       installationId,
-    );
-    const octokit = new Octokit({ auth: token });
-    console.log("[AUTH] Installation token obtained", { installationId });
-
-    console.log("[AUTH] Ensuring fork exists", {
-      installationId,
-      accountLogin: installation.account.login,
     });
 
-    // Ensure fork exists
-    const fork = await deps.ensureForkExists(
-      octokit,
-      installation.account.login,
-    );
+    // Insert installation_id into public.profiles
+    const supabase = deps.createSupabaseClient();
+    const { user: { id: profileId } } = await supabase.auth.getUser();
+    await supabase.rpc("insert_installation_id", {
+      profile_id: profileId,
+      installation_id: installationId,
+    });
 
-    console.log("[AUTH] Fork ensured", {
+    console.log("[AUTH] Installation_id inserted into public.profiles", {
+      profileId,
       installationId,
-      forkOwner: fork.owner,
-      forkRepo: fork.repoName,
-      forkStatus: fork.forkStatus,
     });
 
     const duration = Date.now() - startTime;
@@ -210,7 +207,6 @@ export async function handleCallback(req: Request): Promise<Response> {
     const redirectUrl = new URL("/install", getConfig().frontendUrl);
     redirectUrl.searchParams.set("success", "true");
     redirectUrl.searchParams.set("login", installation.account.login);
-    redirectUrl.searchParams.set("forkUrl", fork.forkUrl);
 
     console.log("[AUTH] Redirecting to frontend", {
       redirectUrl: redirectUrl.toString(),
@@ -244,9 +240,6 @@ export async function handleCallback(req: Request): Promise<Response> {
         errorCode = "missing_permissions";
         errorMessage =
           "The app needs additional permissions. Please reinstall.";
-      } else if (error.message.includes("not found")) {
-        errorCode = "fork_not_found";
-        errorMessage = "Fork not found. Please try installing again.";
       } else {
         errorMessage = error.message;
       }

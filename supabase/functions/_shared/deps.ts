@@ -14,4 +14,4 @@ export { Octokit } from "@octokit/rest";
 export * as jwt from "jsonwebtoken";
 
 // Supabase client for Auth Admin API
-export { createClient } from "@supabase/supabase-js";
+export { createClient, type SupabaseClient } from "@supabase/supabase-js";
