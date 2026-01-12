@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+            "name": "root",
+			"path": "."
+		},
+		{
+			"name": "frontend",
+			"path": "frontend"
+		},
+		{
+			"name": "supabase",
+			"path": "supabase"
+		}
+	],
+	"settings": {
+		"jest.disabledWorkspaceFolders": [
+			"root",
+			"supabase"
+		]
+	}
+}

@@ -1,0 +1,16 @@
+{
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  
+  "cSpell.words": [
+    "faasr",
+    "supabase"
+  ],
+
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+
+  "deno.enable": true,
+  "deno.lint": true,
+}
