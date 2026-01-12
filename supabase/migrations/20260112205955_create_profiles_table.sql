@@ -1,6 +1,9 @@
 CREATE TABLE public.profiles (
   id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
-  installation_id TEXT,
+  gh_installation_id TEXT,
+  gh_user_login TEXT,
+  gh_user_id INTEGER,
+  gh_avatar_url TEXT
 
   PRIMARY KEY (id)
 );
@@ -35,5 +38,16 @@ BEGIN
   UPDATE public.profiles
   SET installation_id = $2
   WHERE id = $1;
+END;
+$$;
+
+-- Function for getting installation_id from public.profiles
+CREATE FUNCTION public.get_installation_id(profile_id UUID)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY definer SET search_path = ''
+AS $$
+BEGIN
+  RETURN (SELECT installation_id FROM public.profiles WHERE id = $1);
 END;
 $$;
