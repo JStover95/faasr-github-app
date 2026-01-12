@@ -42,12 +42,28 @@ END;
 $$;
 
 -- Function for getting installation_id from public.profiles
-CREATE FUNCTION public.get_installation_id(profile_id UUID)
-RETURNS TEXT
+CREATE FUNCTION public.get_gh_user_info(profile_id UUID)
+RETURNS TABLE (
+  gh_installation_id TEXT,
+  gh_user_login TEXT,
+  gh_user_id INTEGER,
+  gh_avatar_url TEXT
+)
 LANGUAGE plpgsql
 SECURITY definer SET search_path = ''
 AS $$
 BEGIN
-  RETURN (SELECT installation_id FROM public.profiles WHERE id = $1);
+  RETURN (
+    SELECT
+      gh_installation_id,
+      gh_user_login,
+      gh_user_id,
+      gh_avatar_url
+    FROM
+      public.profiles
+    WHERE
+      id = $1
+    LIMIT 1
+  );
 END;
 $$;
