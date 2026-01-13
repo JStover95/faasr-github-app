@@ -10,6 +10,20 @@
 import { App, jwt } from "./deps.ts";
 import type { GitHubInstallation } from "./types.ts";
 
+export const deps = {
+  App,
+  jwt,
+};
+
+/**
+ * Required permissions for the GitHub App installation
+ */
+export const REQUIRED_PERMISSIONS = {
+  contents: "write", // To create forks, commit files
+  actions: "write", // To trigger workflow_dispatch events
+  metadata: "read", // Basic repository metadata (always required)
+} as const;
+
 /**
  * GitHub App configuration
  */
@@ -80,20 +94,10 @@ function isGitHubInstallation(value: unknown): value is GitHubInstallation {
 }
 
 /**
- * Required permissions for the GitHub App installation
- * Per FR-004: repository creation, workflow dispatch, file management
- */
-export const REQUIRED_PERMISSIONS = {
-  contents: "write", // To create forks, commit files
-  actions: "write", // To trigger workflow_dispatch events
-  metadata: "read", // Basic repository metadata (always required)
-} as const;
-
-/**
  * Initialize GitHub App instance
  */
 export function createGitHubApp(config: GitHubAppConfig): App {
-  return new App({
+  return new deps.App({
     appId: config.appId,
     privateKey: config.privateKey,
     oauth: config.clientId && config.clientSecret
@@ -123,7 +127,7 @@ export function generateAppJWT(appId: string, privateKey: string): string {
     iss: appId, // GitHub App ID as issuer
   };
 
-  return jwt.sign(payload, privateKey, {
+  return deps.jwt.sign(payload, privateKey, {
     algorithm: "RS256",
   });
 }

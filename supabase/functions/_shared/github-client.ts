@@ -8,6 +8,11 @@ import { Octokit } from "./deps.ts";
 import { getInstallationToken } from "./github-app.ts";
 import type { UserSession } from "./types.ts";
 
+export const deps = {
+  Octokit,
+  getInstallationToken,
+};
+
 /**
  * GitHub App credentials
  */
@@ -32,12 +37,12 @@ export class GitHubClientService {
    * @throws Error if authentication fails
    */
   async getAuthenticatedOctokit(session: UserSession): Promise<Octokit> {
-    const { token } = await getInstallationToken(
+    const { token } = await deps.getInstallationToken(
       this.credentials.appId,
       this.credentials.privateKey,
       session.installationId,
     );
 
-    return new Octokit({ auth: token });
+    return new deps.Octokit({ auth: token });
   }
 }

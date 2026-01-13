@@ -28,7 +28,7 @@ export const deps = {
 /**
  * Get user session from Supabase Auth
  */
-async function getUserSession(): Promise<UserSession | null> {
+export async function getUserSession(): Promise<UserSession | null> {
   const supabase = deps.createSupabaseClient();
   const { data: { user }, error } = await supabase.auth.getUser();
 
@@ -66,7 +66,7 @@ async function getUserSession(): Promise<UserSession | null> {
 /**
  * Parse FormData from request
  */
-async function parseFormData(req: Request): Promise<{
+export async function parseFormData(req: Request): Promise<{
   file: File | null;
   fileName: string | null;
 }> {

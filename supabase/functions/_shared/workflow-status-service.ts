@@ -9,6 +9,12 @@ import type { UserSession } from "./types.ts";
 import { GitHubClientService } from "./github-client.ts";
 import { getWorkflowRunById, sanitizeFileName } from "./workflow.ts";
 
+export const deps = {
+  GitHubClientService,
+  getWorkflowRunById,
+  sanitizeFileName,
+};
+
 /**
  * Workflow file name for FaaSr Register workflow
  */

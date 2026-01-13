@@ -1,11 +1,13 @@
-import { createClient, SupabaseClient } from "./deps.ts";
+import { createClient, type SupabaseClient } from "./deps.ts";
 
-const deps = {
+export const deps = {
   createClient,
 };
 
 let cachedClient: SupabaseClient | null = null;
 
+// Supabase client is an exception to the `getConfig` pattern because the required
+// config is guaranteed by the Edge Runtime.
 export function createSupabaseClient() {
   if (cachedClient) {
     return cachedClient;
