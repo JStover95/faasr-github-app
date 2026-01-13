@@ -63,17 +63,16 @@ LANGUAGE plpgsql
 SECURITY definer SET search_path = ''
 AS $$
 BEGIN
-  RETURN (
+  RETURN QUERY
     SELECT
-      gh_installation_id,
-      gh_user_login,
-      gh_user_id,
-      gh_avatar_url
+      p.gh_installation_id,
+      p.gh_user_login,
+      p.gh_user_id,
+      p.gh_avatar_url
     FROM
-      public.profiles
+      public.profiles p
     WHERE
-      id = $1
-    LIMIT 1
-  );
+      p.id = $1
+    LIMIT 1;
 END;
 $$;

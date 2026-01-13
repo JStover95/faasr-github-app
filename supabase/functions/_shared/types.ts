@@ -17,8 +17,6 @@ export interface UserSession {
   userId: number;
   /** User's GitHub avatar URL */
   avatarUrl?: string;
-  /** JWT session token (stored in HTTP-only cookie) */
-  jwtToken: string;
   /** Session creation time */
   createdAt: Date;
   /** Session expiration time */

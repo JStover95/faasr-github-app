@@ -34,26 +34,14 @@ export const deps = {
  * Handle GET /auth/install - Initiate GitHub App installation
  * This redirects the user to the GitHub App installation page.
  */
-export function handleInstall(req: Request): Response {
+export function handleInstall(): Response {
   const { githubInstallationUrl } = deps.getConfig();
 
-  const url = new URL(req.url);
-  const userAgent = req.headers.get("user-agent") || "unknown";
-
-  console.log("[AUTH] Install request received", {
-    method: req.method,
-    path: url.pathname,
-    userAgent,
-    timestamp: new Date().toISOString(),
-  });
-
   // Build GitHub App installation URL
-  const githubInstallUrl = new URL(
-    githubInstallationUrl,
-  );
+  const githubInstallUrl = new URL(githubInstallationUrl);
   githubInstallUrl.searchParams.set("state", "install");
 
-  console.log("[AUTH] Install redirect generated", {
+  console.log("[INSTALL] Install redirect generated", {
     redirectUrl: githubInstallUrl.toString(),
   });
 
@@ -80,21 +68,13 @@ export async function handleCallback(req: Request): Promise<Response> {
   const { frontendUrl, githubAppId, githubPrivateKey } = deps.getConfig();
 
   const url = new URL(req.url);
-  const userAgent = req.headers.get("user-agent") || "unknown";
   const installationId = url.searchParams.get("installation_id");
-
-  console.log("[AUTH] Callback request received", {
-    method: req.method,
-    path: url.pathname,
-    installationId: installationId || "missing",
-    queryParams: Object.fromEntries(url.searchParams),
-    userAgent,
-    timestamp: new Date().toISOString(),
-  });
 
   try {
     if (!installationId) {
-      console.warn("[AUTH] Callback failed: Missing installation_id parameter");
+      console.warn(
+        "[INSTALL] Callback failed: Missing installation_id parameter",
+      );
 
       const redirectUrl = new URL("/install", frontendUrl);
       redirectUrl.searchParams.set("error", "missing_installation_id");
@@ -111,7 +91,9 @@ export async function handleCallback(req: Request): Promise<Response> {
       });
     }
 
-    console.log("[AUTH] Fetching installation information", { installationId });
+    console.log("[INSTALL] Fetching installation information", {
+      installationId,
+    });
 
     const installation = await deps.getInstallation(
       githubAppId,
@@ -119,9 +101,9 @@ export async function handleCallback(req: Request): Promise<Response> {
       installationId,
     );
 
-    console.log("[AUTH] GitHub installation retrieved");
+    console.log("[INSTALL] GitHub installation retrieved");
 
-    console.log("[AUTH] Validating installation permissions", {
+    console.log("[INSTALL] Validating installation permissions", {
       installationId,
     });
 
@@ -133,7 +115,7 @@ export async function handleCallback(req: Request): Promise<Response> {
     );
 
     if (!permissionCheck.valid) {
-      console.warn("[AUTH] Permission check failed", {
+      console.warn("[INSTALL] Permission check failed", {
         installationId,
         missingPermissions: permissionCheck.missingPermissions,
       });
@@ -154,14 +136,17 @@ export async function handleCallback(req: Request): Promise<Response> {
       });
     }
 
-    console.log("[AUTH] Permissions validated successfully");
+    console.log("[INSTALL] Permissions validated successfully");
 
-    console.log("[AUTH] Inserting GitHub installation into public.profiles", {
-      installationId,
-      accountLogin: installation.account.login,
-      accountId: installation.account.id,
-      avatarUrl: installation.account.avatar_url,
-    });
+    console.log(
+      "[INSTALL] Inserting GitHub installation into public.profiles",
+      {
+        installationId,
+        accountLogin: installation.account.login,
+        accountId: installation.account.id,
+        avatarUrl: installation.account.avatar_url,
+      },
+    );
 
     // Insert GitHub installation into public.profiles
     const supabase = deps.createSupabaseClient();
@@ -174,16 +159,16 @@ export async function handleCallback(req: Request): Promise<Response> {
       gh_avatar_url: installation.account.avatar_url,
     });
 
-    console.log("[AUTH] GitHub installation inserted into public.profiles");
+    console.log("[INSTALL] GitHub installation inserted into public.profiles");
 
-    console.log("[AUTH] Callback completed successfully");
+    console.log("[INSTALL] Callback completed successfully");
 
     // Get frontend URL for redirect
     const redirectUrl = new URL("/install", frontendUrl);
     redirectUrl.searchParams.set("success", "true");
     redirectUrl.searchParams.set("login", installation.account.login);
 
-    console.log("[AUTH] Redirecting to frontend", {
+    console.log("[INSTALL] Redirecting to frontend", {
       redirectUrl: redirectUrl.toString(),
     });
 
@@ -195,7 +180,7 @@ export async function handleCallback(req: Request): Promise<Response> {
       },
     });
   } catch (error) {
-    console.error("[AUTH] Callback error", {
+    console.error("[INSTALL] Callback error", {
       installationId: installationId || "unknown",
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
@@ -243,7 +228,7 @@ export async function handler(req: Request): Promise<Response> {
   const pathMatch = url.pathname.match(/\/functions\/v1(\/.*)$/);
   const path = pathMatch ? pathMatch[1] : url.pathname;
 
-  console.log("[AUTH] Request received", {
+  console.log("[INSTALL] Request received", {
     method: req.method,
     path,
     fullPath: url.pathname,
@@ -255,11 +240,11 @@ export async function handler(req: Request): Promise<Response> {
   try {
     // Route to appropriate handler
     if (path === "/auth/install" && req.method === "GET") {
-      return handleInstall(req);
+      return handleInstall();
     } else if (path === "/auth/callback" && req.method === "GET") {
       return await handleCallback(req);
     } else {
-      console.warn("[AUTH] Route not found", {
+      console.warn("[INSTALL] Route not found", {
         method: req.method,
         path,
       });
@@ -275,7 +260,7 @@ export async function handler(req: Request): Promise<Response> {
       );
     }
   } catch (error) {
-    console.error("[AUTH] Edge Function error", {
+    console.error("[INSTALL] Edge Function error", {
       method: req.method,
       path,
       error: error instanceof Error ? error.message : String(error),

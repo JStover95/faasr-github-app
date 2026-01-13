@@ -52,14 +52,6 @@ export class WorkflowStatusService {
     session: UserSession,
     fileName: string,
   ): Promise<StatusResult> {
-    // Validate GitHub App configuration
-    const configValidation = this.githubClient.validateConfiguration();
-    if (!configValidation.valid) {
-      throw new Error(
-        configValidation.error || "GitHub App configuration missing",
-      );
-    }
-
     // Get authenticated Octokit instance
     const octokit = await this.githubClient.getAuthenticatedOctokit(session);
 
