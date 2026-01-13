@@ -3,8 +3,8 @@
  */
 
 import { assertEquals, assertRejects } from "@std/assert";
-import { getConfig, clearCache } from "../../functions/workflows/config.ts";
-import { saveEnvState, restoreEnvState } from "../test-utils.ts";
+import { clearCache, getConfig } from "../../functions/workflows/config.ts";
+import { restoreEnvState, saveEnvState } from "../test-utils.ts";
 
 Deno.test("getConfig - should return valid config with all env vars set", () => {
   const savedEnv = saveEnvState([
@@ -71,8 +71,8 @@ Deno.test("getConfig - should throw error when GITHUB_APP_ID missing", () => {
     Deno.env.set("FRONTEND_URL", "https://frontend.example.com");
 
     assertRejects(
-      () => {
-        getConfig();
+      async () => {
+        await Promise.resolve(getConfig());
       },
       Error,
       "Missing environment variables",
@@ -97,8 +97,8 @@ Deno.test("getConfig - should throw error when GITHUB_PRIVATE_KEY missing", () =
     Deno.env.set("FRONTEND_URL", "https://frontend.example.com");
 
     assertRejects(
-      () => {
-        getConfig();
+      async () => {
+        await Promise.resolve(getConfig());
       },
       Error,
       "Missing environment variables",
@@ -123,8 +123,8 @@ Deno.test("getConfig - should throw error when FRONTEND_URL missing", () => {
     Deno.env.delete("FRONTEND_URL");
 
     assertRejects(
-      () => {
-        getConfig();
+      async () => {
+        await Promise.resolve(getConfig());
       },
       Error,
       "Missing environment variables",
@@ -152,7 +152,9 @@ Deno.test("getConfig - should list all missing env vars in error", () => {
       getConfig();
       assertEquals(false, true, "Should have thrown error");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
       assertEquals(errorMessage.includes("GITHUB_APP_ID"), true);
       assertEquals(errorMessage.includes("GITHUB_PRIVATE_KEY"), true);
     }
@@ -175,7 +177,6 @@ Deno.test("clearCache - should clear cached config", () => {
     Deno.env.set("GITHUB_PRIVATE_KEY", "test-private-key");
     Deno.env.set("FRONTEND_URL", "https://frontend.example.com");
 
-    const config1 = getConfig();
     clearCache();
     Deno.env.set("GITHUB_APP_ID", "99999");
     const config2 = getConfig();
