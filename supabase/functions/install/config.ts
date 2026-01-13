@@ -1,17 +1,19 @@
-export interface AuthConfig {
+export interface InstallConfig {
+  githubInstallationUrl: string;
   githubClientId: string;
   frontendUrl: string;
   githubAppId: string;
   githubPrivateKey: string;
 }
 
-let cachedConfig: AuthConfig | null = null;
+let cachedConfig: InstallConfig | null = null;
 
-export function getConfig(): AuthConfig {
+export function getConfig(): InstallConfig {
   if (cachedConfig) {
     return cachedConfig;
   }
 
+  const githubInstallationUrl = Deno.env.get("GITHUB_INSTALLATION_URL");
   const githubClientId = Deno.env.get("GITHUB_CLIENT_ID");
   const frontendUrl = Deno.env.get("FRONTEND_URL");
   const githubAppId = Deno.env.get("GITHUB_APP_ID");
@@ -19,6 +21,9 @@ export function getConfig(): AuthConfig {
 
   const missingEnvVars = [];
 
+  if (!githubInstallationUrl) {
+    missingEnvVars.push("GITHUB_INSTALLATION_URL");
+  }
   if (!githubClientId) {
     missingEnvVars.push("GITHUB_CLIENT_ID");
   }
@@ -32,13 +37,17 @@ export function getConfig(): AuthConfig {
     missingEnvVars.push("GITHUB_PRIVATE_KEY");
   }
 
-  if (!(githubClientId && frontendUrl && githubAppId && githubPrivateKey)) {
+  if (
+    !(githubInstallationUrl && githubClientId && frontendUrl && githubAppId &&
+      githubPrivateKey)
+  ) {
     throw new Error(
       `Missing environment variables: ${missingEnvVars.join(", ")}`,
     );
   }
 
   cachedConfig = {
+    githubInstallationUrl,
     githubClientId,
     frontendUrl,
     githubAppId,

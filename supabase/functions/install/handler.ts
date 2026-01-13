@@ -1,5 +1,5 @@
 /**
- * Authentication Edge Function
+ * Install Edge Function
  *
  * Handles GitHub App installation and session management:
  * - GET /auth/install - Redirects to GitHub App installation page
@@ -27,6 +27,7 @@ export const deps = {
   getInstallationToken,
   ensureForkExists,
   createSupabaseClient,
+  getConfig,
 };
 
 /**
@@ -34,7 +35,8 @@ export const deps = {
  * This redirects the user to the GitHub App installation page.
  */
 export function handleInstall(req: Request): Response {
-  const startTime = Date.now();
+  const { githubInstallationUrl } = deps.getConfig();
+
   const url = new URL(req.url);
   const userAgent = req.headers.get("user-agent") || "unknown";
 
@@ -45,32 +47,14 @@ export function handleInstall(req: Request): Response {
     timestamp: new Date().toISOString(),
   });
 
-  const clientId = Deno.env.get("GITHUB_CLIENT_ID");
-  if (!clientId) {
-    console.error("[AUTH] Install failed: GitHub App client ID not configured");
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: "GitHub App client ID not configured",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
-  }
-
   // Build GitHub App installation URL
   const githubInstallUrl = new URL(
-    "https://github.com/apps/faasr-test-app/installations/new",
+    githubInstallationUrl,
   );
   githubInstallUrl.searchParams.set("state", "install");
 
-  const duration = Date.now() - startTime;
-
   console.log("[AUTH] Install redirect generated", {
     redirectUrl: githubInstallUrl.toString(),
-    duration: `${duration}ms`,
   });
 
   return new Response(
@@ -93,7 +77,8 @@ export function handleInstall(req: Request): Response {
  * This handles the GitHub App installation callback.
  */
 export async function handleCallback(req: Request): Promise<Response> {
-  const startTime = Date.now();
+  const { frontendUrl, githubAppId, githubPrivateKey } = deps.getConfig();
+
   const url = new URL(req.url);
   const userAgent = req.headers.get("user-agent") || "unknown";
   const installationId = url.searchParams.get("installation_id");
@@ -111,7 +96,7 @@ export async function handleCallback(req: Request): Promise<Response> {
     if (!installationId) {
       console.warn("[AUTH] Callback failed: Missing installation_id parameter");
 
-      const redirectUrl = new URL("/install", getConfig().frontendUrl);
+      const redirectUrl = new URL("/install", frontendUrl);
       redirectUrl.searchParams.set("error", "missing_installation_id");
       redirectUrl.searchParams.set(
         "message",
@@ -129,16 +114,12 @@ export async function handleCallback(req: Request): Promise<Response> {
     console.log("[AUTH] Fetching installation information", { installationId });
 
     const installation = await deps.getInstallation(
-      getConfig().githubAppId,
-      getConfig().githubPrivateKey,
+      githubAppId,
+      githubPrivateKey,
       installationId,
     );
 
-    console.log("[AUTH] Installation retrieved", {
-      installationId,
-      accountLogin: installation.account.login,
-      accountId: installation.account.id,
-    });
+    console.log("[AUTH] GitHub installation retrieved");
 
     console.log("[AUTH] Validating installation permissions", {
       installationId,
@@ -146,8 +127,8 @@ export async function handleCallback(req: Request): Promise<Response> {
 
     // Validate permissions
     const permissionCheck = await deps.checkInstallationPermissions(
-      getConfig().githubAppId,
-      getConfig().githubPrivateKey,
+      githubAppId,
+      githubPrivateKey,
       installationId,
     );
 
@@ -157,7 +138,6 @@ export async function handleCallback(req: Request): Promise<Response> {
         missingPermissions: permissionCheck.missingPermissions,
       });
 
-      const frontendUrl = getConfig().frontendUrl;
       const redirectUrl = new URL("/install", frontendUrl);
 
       redirectUrl.searchParams.set("error", "missing_permissions");
@@ -174,37 +154,32 @@ export async function handleCallback(req: Request): Promise<Response> {
       });
     }
 
-    console.log("[AUTH] Permissions validated successfully", {
-      installationId,
-    });
+    console.log("[AUTH] Permissions validated successfully");
 
-    console.log("[AUTH] Inserting installation_id into public.profiles", {
-      installationId,
-    });
-
-    // Insert installation_id into public.profiles
-    const supabase = deps.createSupabaseClient();
-    const { user: { id: profileId } } = await supabase.auth.getUser();
-    await supabase.rpc("insert_installation_id", {
-      profile_id: profileId,
-      installation_id: installationId,
-    });
-
-    console.log("[AUTH] Installation_id inserted into public.profiles", {
-      profileId,
-      installationId,
-    });
-
-    const duration = Date.now() - startTime;
-
-    console.log("[AUTH] Callback completed successfully", {
+    console.log("[AUTH] Inserting GitHub installation into public.profiles", {
       installationId,
       accountLogin: installation.account.login,
-      duration: `${duration}ms`,
+      accountId: installation.account.id,
+      avatarUrl: installation.account.avatar_url,
     });
 
+    // Insert GitHub installation into public.profiles
+    const supabase = deps.createSupabaseClient();
+    const { user: { id: profileId } } = await supabase.auth.getUser();
+    await supabase.rpc("insert_gh_installation", {
+      profile_id: profileId,
+      gh_installation_id: installationId,
+      gh_user_login: installation.account.login,
+      gh_user_id: installation.account.id,
+      gh_avatar_url: installation.account.avatar_url,
+    });
+
+    console.log("[AUTH] GitHub installation inserted into public.profiles");
+
+    console.log("[AUTH] Callback completed successfully");
+
     // Get frontend URL for redirect
-    const redirectUrl = new URL("/install", getConfig().frontendUrl);
+    const redirectUrl = new URL("/install", frontendUrl);
     redirectUrl.searchParams.set("success", "true");
     redirectUrl.searchParams.set("login", installation.account.login);
 
@@ -220,12 +195,10 @@ export async function handleCallback(req: Request): Promise<Response> {
       },
     });
   } catch (error) {
-    const duration = Date.now() - startTime;
     console.error("[AUTH] Callback error", {
       installationId: installationId || "unknown",
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
-      duration: `${duration}ms`,
       timestamp: new Date().toISOString(),
     });
 
@@ -245,7 +218,6 @@ export async function handleCallback(req: Request): Promise<Response> {
       }
     }
 
-    const frontendUrl = getConfig().frontendUrl;
     const redirectUrl = new URL("/install", frontendUrl);
     redirectUrl.searchParams.set("error", errorCode);
     redirectUrl.searchParams.set("message", errorMessage);
@@ -263,7 +235,6 @@ export async function handleCallback(req: Request): Promise<Response> {
  * Main Edge Function handler
  */
 export async function handler(req: Request): Promise<Response> {
-  const requestStartTime = Date.now();
   const url = new URL(req.url);
   const userAgent = req.headers.get("user-agent") || "unknown";
   const referer = req.headers.get("referer") || "none";
@@ -304,13 +275,11 @@ export async function handler(req: Request): Promise<Response> {
       );
     }
   } catch (error) {
-    const duration = Date.now() - requestStartTime;
     console.error("[AUTH] Edge Function error", {
       method: req.method,
       path,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
-      duration: `${duration}ms`,
       timestamp: new Date().toISOString(),
     });
     return new Response(
