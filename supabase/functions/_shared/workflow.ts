@@ -8,7 +8,7 @@
  * - Retrieving workflow run status
  */
 
-import { Octokit } from "./deps.ts";
+import type { Octokit } from "./deps.ts";
 
 /**
  * Maximum file size in bytes (1MB for PoC)

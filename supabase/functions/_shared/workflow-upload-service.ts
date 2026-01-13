@@ -6,13 +6,20 @@
  */
 
 import type { UserSession } from "./types.ts";
-import { GitHubClientService } from "./github-client.ts";
+import type { GitHubClientService } from "./github-client.ts";
 import {
   commitFileToRepository,
   sanitizeFileName,
   triggerWorkflowDispatch,
   validateWorkflowFile,
 } from "./workflow.ts";
+
+export const deps = {
+  commitFileToRepository,
+  sanitizeFileName,
+  triggerWorkflowDispatch,
+  validateWorkflowFile,
+};
 
 /**
  * Workflow file name for FaaSr Register workflow
@@ -69,8 +76,8 @@ export class WorkflowUploadService {
     fileContent: string,
     fileSize: number,
   ): { valid: boolean; errors: string[]; sanitizedFileName: string } {
-    const sanitizedFileName = sanitizeFileName(fileName);
-    const validation = validateWorkflowFile(
+    const sanitizedFileName = deps.sanitizeFileName(fileName);
+    const validation = deps.validateWorkflowFile(
       sanitizedFileName,
       fileContent,
       fileSize,
@@ -117,7 +124,7 @@ export class WorkflowUploadService {
     const sanitizedFileName = validation.sanitizedFileName;
 
     // Commit file to repository
-    const commitSha = await commitFileToRepository(
+    const commitSha = await deps.commitFileToRepository(
       octokit,
       session.userLogin,
       session.repoName,
@@ -156,7 +163,7 @@ export class WorkflowUploadService {
     let workflowRunUrl: string | undefined;
 
     try {
-      await triggerWorkflowDispatch(
+      await deps.triggerWorkflowDispatch(
         octokit,
         session.userLogin,
         session.repoName,
