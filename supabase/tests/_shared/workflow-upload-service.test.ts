@@ -4,14 +4,18 @@
 
 import { assertEquals, assertRejects } from "@std/assert";
 import { stub } from "@std/testing/mock";
-import { WorkflowUploadService, deps } from "../../functions/_shared/workflow-upload-service.ts";
-import { GitHubClientService } from "../../functions/_shared/github-client.ts";
+import {
+  deps,
+  WorkflowUploadService,
+} from "../../functions/_shared/workflow-upload-service.ts";
 import { createMockOctokit } from "../test-utils.ts";
 import type { UserSession } from "../../functions/_shared/types.ts";
 
 Deno.test("validateFile - should return valid for correct file", () => {
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => createMockOctokit(),
+    getAuthenticatedOctokit: async () =>
+      await Promise.resolve(createMockOctokit()),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -29,7 +33,9 @@ Deno.test("validateFile - should return valid for correct file", () => {
 
 Deno.test("validateFile - should return sanitized file name", () => {
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => createMockOctokit(),
+    getAuthenticatedOctokit: async () =>
+      await Promise.resolve(createMockOctokit()),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -45,7 +51,9 @@ Deno.test("validateFile - should return sanitized file name", () => {
 
 Deno.test("validateFile - should return errors for invalid file", () => {
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => createMockOctokit(),
+    getAuthenticatedOctokit: async () =>
+      await Promise.resolve(createMockOctokit()),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -63,7 +71,8 @@ Deno.test("validateFile - should return errors for invalid file", () => {
 Deno.test("uploadWorkflow - should upload valid workflow file", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -73,7 +82,11 @@ Deno.test("uploadWorkflow - should upload valid workflow file", async () => {
     errors: [],
   }));
   const sanitizeStub = stub(deps, "sanitizeFileName", (name: string) => name);
-  const commitStub = stub(deps, "commitFileToRepository", async () => "abc123");
+  const commitStub = stub(
+    deps,
+    "commitFileToRepository",
+    async () => await Promise.resolve("abc123"),
+  );
 
   try {
     const session: UserSession = {
@@ -89,7 +102,11 @@ Deno.test("uploadWorkflow - should upload valid workflow file", async () => {
       type: "application/json",
     });
 
-    const result = await service.uploadWorkflow(session, file, "test-workflow.json");
+    const result = await service.uploadWorkflow(
+      session,
+      file,
+      "test-workflow.json",
+    );
 
     assertEquals(result.fileName, "test-workflow.json");
     assertEquals(result.commitSha, "abc123");
@@ -103,7 +120,8 @@ Deno.test("uploadWorkflow - should upload valid workflow file", async () => {
 Deno.test("uploadWorkflow - should return commit SHA and sanitized file name", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -112,8 +130,16 @@ Deno.test("uploadWorkflow - should return commit SHA and sanitized file name", a
     valid: true,
     errors: [],
   }));
-  const sanitizeStub = stub(deps, "sanitizeFileName", () => "sanitized-workflow.json");
-  const commitStub = stub(deps, "commitFileToRepository", async () => "def456");
+  const sanitizeStub = stub(
+    deps,
+    "sanitizeFileName",
+    () => "sanitized-workflow.json",
+  );
+  const commitStub = stub(
+    deps,
+    "commitFileToRepository",
+    async () => await Promise.resolve("def456"),
+  );
 
   try {
     const session: UserSession = {
@@ -129,7 +155,11 @@ Deno.test("uploadWorkflow - should return commit SHA and sanitized file name", a
       type: "application/json",
     });
 
-    const result = await service.uploadWorkflow(session, file, "test-workflow.json");
+    const result = await service.uploadWorkflow(
+      session,
+      file,
+      "test-workflow.json",
+    );
 
     assertEquals(result.fileName, "sanitized-workflow.json");
     assertEquals(result.commitSha, "def456");
@@ -143,7 +173,8 @@ Deno.test("uploadWorkflow - should return commit SHA and sanitized file name", a
 Deno.test("uploadWorkflow - should throw error for invalid file", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -184,7 +215,8 @@ Deno.test("uploadWorkflow - should throw error for invalid file", async () => {
 Deno.test("uploadWorkflow - should throw error when repo name missing", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -218,7 +250,8 @@ Deno.test("uploadWorkflow - should throw error when repo name missing", async ()
 Deno.test("uploadWorkflow - should validate file before upload", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -232,7 +265,11 @@ Deno.test("uploadWorkflow - should validate file before upload", async () => {
     };
   });
   const sanitizeStub = stub(deps, "sanitizeFileName", (name: string) => name);
-  const commitStub = stub(deps, "commitFileToRepository", async () => "abc123");
+  const commitStub = stub(
+    deps,
+    "commitFileToRepository",
+    async () => await Promise.resolve("abc123"),
+  );
 
   try {
     const session: UserSession = {
@@ -261,7 +298,8 @@ Deno.test("uploadWorkflow - should validate file before upload", async () => {
 Deno.test("uploadWorkflow - should commit to correct repository", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -277,10 +315,10 @@ Deno.test("uploadWorkflow - should commit to correct repository", async () => {
   const commitStub = stub(
     deps,
     "commitFileToRepository",
-    async (octokit: unknown, owner: string, repo: string) => {
+    async (_octokit: unknown, owner: string, repo: string) => {
       capturedOwner = owner;
       capturedRepo = repo;
-      return "abc123";
+      return await Promise.resolve("abc123");
     },
   );
 
@@ -312,7 +350,8 @@ Deno.test("uploadWorkflow - should commit to correct repository", async () => {
 Deno.test("triggerRegistration - should trigger workflow dispatch", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -320,6 +359,7 @@ Deno.test("triggerRegistration - should trigger workflow dispatch", async () => 
   let dispatchCalled = false;
   const dispatchStub = stub(deps, "triggerWorkflowDispatch", async () => {
     dispatchCalled = true;
+    return await Promise.resolve();
   });
 
   mockOctokit.withRestResponse("actions.listWorkflowRuns", () => ({
@@ -354,7 +394,8 @@ Deno.test("triggerRegistration - should trigger workflow dispatch", async () => 
 Deno.test("triggerRegistration - should return workflow run ID when available", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -382,10 +423,16 @@ Deno.test("triggerRegistration - should return workflow run ID when available", 
       expiresAt: new Date(),
     };
 
-    const result = await service.triggerRegistration(session, "test-workflow.json");
+    const result = await service.triggerRegistration(
+      session,
+      "test-workflow.json",
+    );
 
     assertEquals(result.workflowRunId, 123);
-    assertEquals(result.workflowRunUrl, "https://github.com/test/repo/actions/runs/123");
+    assertEquals(
+      result.workflowRunUrl,
+      "https://github.com/test/repo/actions/runs/123",
+    );
   } finally {
     dispatchStub.restore();
   }
@@ -394,7 +441,8 @@ Deno.test("triggerRegistration - should return workflow run ID when available", 
 Deno.test("triggerRegistration - should return undefined when run ID not available", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
@@ -417,7 +465,10 @@ Deno.test("triggerRegistration - should return undefined when run ID not availab
       expiresAt: new Date(),
     };
 
-    const result = await service.triggerRegistration(session, "test-workflow.json");
+    const result = await service.triggerRegistration(
+      session,
+      "test-workflow.json",
+    );
 
     assertEquals(result.workflowRunId, undefined);
     assertEquals(result.workflowRunUrl, undefined);
@@ -429,13 +480,14 @@ Deno.test("triggerRegistration - should return undefined when run ID not availab
 Deno.test("triggerRegistration - should log error but succeed when dispatch fails", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
 
   const dispatchStub = stub(deps, "triggerWorkflowDispatch", async () => {
-    throw new Error("Dispatch failed");
+    return await Promise.reject(new Error("Dispatch failed"));
   });
 
   try {
@@ -449,7 +501,10 @@ Deno.test("triggerRegistration - should log error but succeed when dispatch fail
     };
 
     // Should not throw, but return undefined
-    const result = await service.triggerRegistration(session, "test-workflow.json");
+    const result = await service.triggerRegistration(
+      session,
+      "test-workflow.json",
+    );
 
     assertEquals(result.workflowRunId, undefined);
     assertEquals(result.workflowRunUrl, undefined);
@@ -461,7 +516,8 @@ Deno.test("triggerRegistration - should log error but succeed when dispatch fail
 Deno.test("triggerRegistration - should throw error when repo name missing", async () => {
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
   } as any;
 
   const service = new WorkflowUploadService(mockGithubClient);
