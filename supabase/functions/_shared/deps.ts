@@ -11,7 +11,7 @@ export { App } from "@octokit/app";
 export { Octokit } from "@octokit/rest";
 
 // JWT signing for GitHub App authentication
-export * as jwt from "jsonwebtoken";
+export { sign } from "jsonwebtoken";
 
 // Supabase client for Auth Admin API
 export { createClient, type SupabaseClient } from "@supabase/supabase-js";

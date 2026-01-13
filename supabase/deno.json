@@ -1,6 +1,7 @@
 {
   "tasks": {
-    "dev": "deno run --watch main.ts"
+    "dev": "deno run --watch main.ts",
+    "test": "deno test --allow-all"
   },
   "imports": {
     "@octokit/app": "npm:@octokit/app@16.1.2",

@@ -7,12 +7,12 @@
  * - Permission validation
  */
 
-import { App, jwt } from "./deps.ts";
+import { App, sign } from "./deps.ts";
 import type { GitHubInstallation } from "./types.ts";
 
 export const deps = {
   App,
-  jwt,
+  sign,
 };
 
 /**
@@ -127,7 +127,7 @@ export function generateAppJWT(appId: string, privateKey: string): string {
     iss: appId, // GitHub App ID as issuer
   };
 
-  return deps.jwt.sign(payload, privateKey, {
+  return deps.sign(payload, privateKey, {
     algorithm: "RS256",
   });
 }

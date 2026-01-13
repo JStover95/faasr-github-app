@@ -87,12 +87,12 @@ export class MockSupabaseClient {
   ): Promise<{ data: unknown; error: unknown }> {
     const queue = this._rpcResponses.get(fn);
     if (!queue || queue.length === 0) {
-      return Promise.reject(
+      return await Promise.reject(
         new Error(`No RPC response configured for function: ${fn}`),
       );
     }
     const callback = queue.shift()!;
-    return Promise.resolve(callback(args));
+    return await Promise.resolve(callback(args));
   }
 
   /**
@@ -107,11 +107,11 @@ export class MockSupabaseClient {
     return {
       getUser: async () => {
         if (this._authResponses.length === 0) {
-          return Promise.reject(
+          return await Promise.reject(
             new Error("No auth response configured"),
           );
         }
-        return Promise.resolve(this._authResponses.shift()!);
+        return await Promise.resolve(this._authResponses.shift()!);
       },
     };
   }
@@ -134,7 +134,8 @@ export class MockOctokit {
     Array<() => { data: unknown }>
   > = new Map();
   private _requestResponses: Array<() => { data: unknown }> = [];
-  private _authResponses: Array<() => { token: string; expiresAt: string }> = [];
+  private _authResponses: Array<() => { token: string; expiresAt: string }> =
+    [];
 
   /**
    * Queue a REST API response
@@ -168,11 +169,14 @@ export class MockOctokit {
   /**
    * Get auth method
    */
-  async auth(options: { type: string }): Promise<{ token: string; expiresAt: string }> {
+  async auth(
+    _options: { type: string },
+  ): Promise<{ token: string; expiresAt: string }> {
     if (this._authResponses.length === 0) {
       throw new Error("No auth response configured");
     }
-    return this._authResponses.shift()!();
+    // deno-lint-ignore no-explicit-any
+    return await Promise.resolve(this._authResponses.shift()!() as any);
   }
 
   /**
@@ -209,14 +213,16 @@ export class MockOctokit {
           if (!queue || queue.length === 0) {
             throw new Error("No response configured for repos.get");
           }
-          return queue.shift()!();
+          // deno-lint-ignore no-explicit-any
+          return await Promise.resolve(queue.shift()!() as any);
         },
         getContent: async (_params: unknown) => {
           const queue = this._restResponses.get("repos.getContent");
           if (!queue || queue.length === 0) {
             throw new Error("No response configured for repos.getContent");
           }
-          return queue.shift()!();
+          // deno-lint-ignore no-explicit-any
+          return await Promise.resolve(queue.shift()!() as any);
         },
         createOrUpdateFileContents: async (_params: unknown) => {
           const queue = this._restResponses.get(
@@ -227,7 +233,8 @@ export class MockOctokit {
               "No response configured for repos.createOrUpdateFileContents",
             );
           }
-          return queue.shift()!();
+          // deno-lint-ignore no-explicit-any
+          return await Promise.resolve(queue.shift()!() as any);
         },
       },
       actions: {
@@ -238,14 +245,18 @@ export class MockOctokit {
               "No response configured for actions.listWorkflowRuns",
             );
           }
-          return queue.shift()!();
+          // deno-lint-ignore no-explicit-any
+          return await Promise.resolve(queue.shift()!() as any);
         },
         getWorkflowRun: async (_params: unknown) => {
           const queue = this._restResponses.get("actions.getWorkflowRun");
           if (!queue || queue.length === 0) {
-            throw new Error("No response configured for actions.getWorkflowRun");
+            throw new Error(
+              "No response configured for actions.getWorkflowRun",
+            );
           }
-          return queue.shift()!();
+          // deno-lint-ignore no-explicit-any
+          return await Promise.resolve(queue.shift()!() as any);
         },
         createWorkflowDispatch: async (_params: unknown) => {
           const queue = this._restResponses.get(
@@ -253,10 +264,10 @@ export class MockOctokit {
           );
           if (!queue || queue.length === 0) {
             // Dispatch doesn't return data, so we can succeed without a response
-            return Promise.resolve();
+            return await Promise.resolve();
           }
           queue.shift()!();
-          return Promise.resolve();
+          return await Promise.resolve();
         },
       },
     };
@@ -272,7 +283,8 @@ export class MockOctokit {
     if (this._requestResponses.length === 0) {
       throw new Error(`No request response configured for route: ${route}`);
     }
-    return this._requestResponses.shift()!();
+    // deno-lint-ignore no-explicit-any
+    return await Promise.resolve(this._requestResponses.shift()!() as any);
   }
 }
 
@@ -311,7 +323,7 @@ export class MockApp {
       );
     }
     // deno-lint-ignore no-explicit-any
-    return Promise.resolve(octokit) as any;
+    return await Promise.resolve(octokit) as any;
   }
 }
 
@@ -323,6 +335,8 @@ export function createMockApp() {
   return new MockApp() as any;
 }
 
+export const MOCK_JWT_TOKEN = "mock.jwt.token";
+
 /**
  * Mock JWT with sign method
  */
@@ -333,7 +347,7 @@ export const mockJWT = {
     _options?: { algorithm?: string },
   ): string => {
     // Return a deterministic mock JWT
-    return "mock.jwt.token";
+    return MOCK_JWT_TOKEN;
   },
 };
 
