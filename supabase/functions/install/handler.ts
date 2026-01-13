@@ -227,7 +227,29 @@ export async function handleCallback(req: Request): Promise<Response> {
 
     // Insert GitHub installation into public.profiles
     const supabase = deps.createSupabaseClient();
-    const { user: { id: profileId } } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data.user) {
+      console.warn("[INSTALL] Failed to get user", {
+        error: error?.message,
+      });
+
+      const redirectUrl = new URL("/install", frontendUrl);
+      redirectUrl.searchParams.set("error", "failed_to_get_user");
+      redirectUrl.searchParams.set(
+        "message",
+        "Failed to get user. Please try again.",
+      );
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: redirectUrl.toString(),
+        },
+      });
+    }
+
+    const profileId = data.user.id;
     await supabase.rpc("insert_gh_installation", {
       profile_id: profileId,
       gh_installation_id: installationId,
