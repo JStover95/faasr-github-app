@@ -58,6 +58,7 @@ export async function getUserSession(): Promise<UserSession | null> {
     userLogin: installationData.gh_user_login,
     userId: installationData.gh_user_id,
     avatarUrl: installationData.gh_avatar_url,
+    repoName: installationData.gh_repo_name,
     createdAt: new Date(),
     expiresAt: new Date(Date.now() + 3600000),
   };

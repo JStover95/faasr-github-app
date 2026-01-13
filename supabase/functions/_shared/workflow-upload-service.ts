@@ -25,11 +25,6 @@ const REGISTER_WORKFLOW_ID = "register-workflow.yml";
 const DEFAULT_BRANCH = "main";
 
 /**
- * Repository name for workflow files
- */
-const REPO_NAME = "FaaSr-workflow";
-
-/**
  * Upload result containing file commit information
  */
 export interface UploadResult {
@@ -102,6 +97,10 @@ export class WorkflowUploadService {
     file: File,
     fileName: string,
   ): Promise<UploadResult> {
+    if (!session.repoName) {
+      throw new Error("Repository name not found in user session");
+    }
+
     // Get authenticated Octokit instance
     const octokit = await this.githubClient.getAuthenticatedOctokit(session);
 
@@ -121,7 +120,7 @@ export class WorkflowUploadService {
     const commitSha = await commitFileToRepository(
       octokit,
       session.userLogin,
-      REPO_NAME,
+      session.repoName,
       sanitizedFileName,
       fileContent,
       DEFAULT_BRANCH,
@@ -145,6 +144,10 @@ export class WorkflowUploadService {
     session: UserSession,
     fileName: string,
   ): Promise<RegistrationResult> {
+    if (!session.repoName) {
+      throw new Error("Repository name not found in user session");
+    }
+
     // Get authenticated Octokit instance
     const octokit = await this.githubClient.getAuthenticatedOctokit(session);
 
@@ -156,7 +159,7 @@ export class WorkflowUploadService {
       await triggerWorkflowDispatch(
         octokit,
         session.userLogin,
-        REPO_NAME,
+        session.repoName,
         REGISTER_WORKFLOW_ID,
         DEFAULT_BRANCH,
         {
@@ -168,7 +171,7 @@ export class WorkflowUploadService {
       try {
         const runs = await octokit.rest.actions.listWorkflowRuns({
           owner: session.userLogin,
-          repo: REPO_NAME,
+          repo: session.repoName,
           workflow_id: REGISTER_WORKFLOW_ID,
           per_page: 1,
         });

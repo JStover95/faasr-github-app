@@ -17,28 +17,12 @@ export interface UserSession {
   userId: number;
   /** User's GitHub avatar URL */
   avatarUrl?: string;
+  /** Fork repository name */
+  repoName?: string;
   /** Session creation time */
   createdAt: Date;
   /** Session expiration time */
   expiresAt: Date;
-}
-
-/**
- * Repository Fork - Represents the user's fork of the FaaSr-workflow repository
- */
-export interface RepositoryFork {
-  /** GitHub username who owns the fork (same as userLogin) */
-  owner: string;
-  /** Repository name (always "FaaSr-workflow" for this use case) */
-  repoName: string;
-  /** Full GitHub URL to the fork */
-  forkUrl: string;
-  /** Status of fork operation */
-  forkStatus: "pending" | "exists" | "created" | "failed";
-  /** Default branch name (typically "main") */
-  defaultBranch: string;
-  /** When fork was created (if newly created) */
-  createdAt?: Date;
 }
 
 /**

@@ -257,3 +257,100 @@ export async function checkInstallationPermissions(
     };
   }
 }
+
+/**
+ * Repository from installation repositories API
+ */
+interface InstallationRepository {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+    id: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+/**
+ * Installation repositories response structure
+ */
+interface InstallationRepositoriesResponse {
+  total_count: number;
+  repositories: InstallationRepository[];
+}
+
+/**
+ * Type guard to verify installation repositories response structure
+ *
+ * @param value - Unknown value from API response
+ * @returns True if value has the expected structure
+ */
+function isInstallationRepositoriesResponse(
+  value: unknown,
+): value is InstallationRepositoriesResponse {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const response = value as Record<string, unknown>;
+
+  if (typeof response.total_count !== "number") {
+    return false;
+  }
+
+  if (!Array.isArray(response.repositories)) {
+    return false;
+  }
+
+  // Validate at least one repository has required fields
+  if (response.repositories.length > 0) {
+    const repo = response.repositories[0] as Record<string, unknown>;
+    if (
+      typeof repo.id !== "number" ||
+      typeof repo.name !== "string" ||
+      typeof repo.full_name !== "string" ||
+      typeof repo.owner !== "object" ||
+      repo.owner === null
+    ) {
+      return false;
+    }
+
+    const owner = repo.owner as Record<string, unknown>;
+    if (typeof owner.login !== "string" || typeof owner.id !== "number") {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Get repositories accessible to an installation
+ *
+ * @param appId - GitHub App ID
+ * @param privateKey - GitHub App private key
+ * @param installationId - Installation ID from GitHub
+ * @returns Array of repositories accessible to the installation
+ */
+export async function getInstallationRepos(
+  appId: string,
+  privateKey: string,
+  installationId: string,
+): Promise<InstallationRepository[]> {
+  const app = createGitHubApp({ appId, privateKey });
+  const octokit = await app.getInstallationOctokit(
+    parseInt(installationId, 10),
+  );
+
+  const response = await octokit.request("GET /installation/repositories");
+
+  if (!isInstallationRepositoriesResponse(response.data)) {
+    throw new Error(
+      "Invalid installation repositories response from GitHub API",
+    );
+  }
+
+  return response.data.repositories;
+}

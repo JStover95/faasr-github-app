@@ -11,9 +11,11 @@
 import {
   checkInstallationPermissions,
   getInstallation,
+  getInstallationRepos,
   getInstallationToken,
 } from "../_shared/github-app.ts";
-import { ensureForkExists } from "../_shared/repository.ts";
+import { isFork } from "../_shared/repository.ts";
+import { Octokit } from "../_shared/deps.ts";
 import { getConfig } from "./config.ts";
 import { createSupabaseClient } from "../_shared/supabase-client.ts";
 
@@ -25,7 +27,9 @@ export const deps = {
   getInstallation,
   checkInstallationPermissions,
   getInstallationToken,
-  ensureForkExists,
+  getInstallationRepos,
+  isFork,
+  Octokit,
   createSupabaseClient,
   getConfig,
 };
@@ -138,6 +142,78 @@ export async function handleCallback(req: Request): Promise<Response> {
 
     console.log("[INSTALL] Permissions validated successfully");
 
+    console.log("[INSTALL] Getting installation token", {
+      installationId,
+    });
+
+    // Get installation token to authenticate API requests
+    const { token } = await deps.getInstallationToken(
+      githubAppId,
+      githubPrivateKey,
+      installationId,
+    );
+
+    console.log("[INSTALL] Installation token retrieved");
+
+    // Create Octokit instance for API calls
+    const octokit = new deps.Octokit({ auth: token });
+
+    console.log("[INSTALL] Fetching installation repositories", {
+      installationId,
+    });
+
+    // Get repositories accessible to the installation
+    const repos = await deps.getInstallationRepos(
+      githubAppId,
+      githubPrivateKey,
+      installationId,
+    );
+
+    console.log("[INSTALL] Installation repositories retrieved", {
+      repoCount: repos.length,
+    });
+
+    // Find the fork repository
+    let forkRepoName: string | null = null;
+    for (const repo of repos) {
+      const isForkRepo = await deps.isFork(
+        octokit,
+        installation.account.login,
+        repo.name,
+      );
+      if (isForkRepo) {
+        forkRepoName = repo.name;
+        break;
+      }
+    }
+
+    if (!forkRepoName) {
+      console.warn("[INSTALL] No fork repository found", {
+        installationId,
+        accountLogin: installation.account.login,
+        repoCount: repos.length,
+      });
+
+      const redirectUrl = new URL("/install", frontendUrl);
+      redirectUrl.searchParams.set("error", "no_fork_found");
+      redirectUrl.searchParams.set(
+        "message",
+        "No fork of the source repository found. Please fork the repository and try again.",
+      );
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: redirectUrl.toString(),
+        },
+      });
+    }
+
+    console.log("[INSTALL] Fork repository found", {
+      installationId,
+      forkRepoName,
+    });
+
     console.log(
       "[INSTALL] Inserting GitHub installation into public.profiles",
       {
@@ -145,6 +221,7 @@ export async function handleCallback(req: Request): Promise<Response> {
         accountLogin: installation.account.login,
         accountId: installation.account.id,
         avatarUrl: installation.account.avatar_url,
+        forkRepoName,
       },
     );
 
@@ -157,6 +234,7 @@ export async function handleCallback(req: Request): Promise<Response> {
       gh_user_login: installation.account.login,
       gh_user_id: installation.account.id,
       gh_avatar_url: installation.account.avatar_url,
+      gh_repo_name: forkRepoName,
     });
 
     console.log("[INSTALL] GitHub installation inserted into public.profiles");
@@ -198,6 +276,10 @@ export async function handleCallback(req: Request): Promise<Response> {
         errorCode = "missing_permissions";
         errorMessage =
           "The app needs additional permissions. Please reinstall.";
+      } else if (error.message.includes("fork")) {
+        errorCode = "no_fork_found";
+        errorMessage =
+          "No fork of the source repository found. Please fork the repository and try again.";
       } else {
         errorMessage = error.message;
       }

@@ -3,7 +3,8 @@ CREATE TABLE public.profiles (
   gh_installation_id TEXT,
   gh_user_login TEXT,
   gh_user_id INTEGER,
-  gh_avatar_url TEXT
+  gh_avatar_url TEXT,
+  gh_repo_name TEXT
 
   PRIMARY KEY (id)
 );
@@ -34,7 +35,8 @@ CREATE FUNCTION public.insert_gh_installation(
   gh_installation_id TEXT,
   gh_user_login TEXT,
   gh_user_id INTEGER,
-  gh_avatar_url TEXT
+  gh_avatar_url TEXT,
+  gh_repo_name TEXT
 )
 RETURNS VOID
 LANGUAGE plpgsql
@@ -46,7 +48,8 @@ BEGIN
     gh_installation_id = $2,
     gh_user_login = $3,
     gh_user_id = $4,
-    gh_avatar_url = $5
+    gh_avatar_url = $5,
+    gh_repo_name = $6
   WHERE id = $1;
 END;
 $$;
@@ -57,7 +60,8 @@ RETURNS TABLE (
   gh_installation_id TEXT,
   gh_user_login TEXT,
   gh_user_id INTEGER,
-  gh_avatar_url TEXT
+  gh_avatar_url TEXT,
+  gh_repo_name TEXT
 )
 LANGUAGE plpgsql
 SECURITY definer SET search_path = ''
@@ -68,7 +72,8 @@ BEGIN
       p.gh_installation_id,
       p.gh_user_login,
       p.gh_user_id,
-      p.gh_avatar_url
+      p.gh_avatar_url,
+      p.gh_repo_name
     FROM
       public.profiles p
     WHERE

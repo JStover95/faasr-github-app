@@ -2,11 +2,10 @@
  * Repository utilities for fork detection
  *
  * Provides functions for:
- * - Checking if a fork exists
+ * - Checking if a repository is a fork of the source repository
  */
 
 import type { Octokit } from "./deps.ts";
-import type { RepositoryFork } from "./types.ts";
 
 /**
  * Source repository configuration
@@ -17,20 +16,22 @@ const SOURCE_REPO = {
 } as const;
 
 /**
- * Check if a fork of FaaSr-workflow exists for the given user
+ * Check if a repository is a fork of the source repository
  *
  * @param octokit - Authenticated Octokit instance
- * @param userLogin - GitHub username to check for fork
- * @returns Fork information if exists, null otherwise
+ * @param owner - GitHub username who owns the repository
+ * @param repoName - Name of the repository to check
+ * @returns True if the repository is a fork of the source repository, false otherwise
  */
-export async function checkForkExists(
+export async function isFork(
   octokit: Octokit,
-  userLogin: string,
-): Promise<RepositoryFork | null> {
+  owner: string,
+  repoName: string,
+): Promise<boolean> {
   try {
     const response = await octokit.rest.repos.get({
-      owner: userLogin,
-      repo: SOURCE_REPO.name,
+      owner,
+      repo: repoName,
     });
 
     // Check if this is a fork of the source repository
@@ -40,26 +41,17 @@ export async function checkForkExists(
         parent.owner.login === SOURCE_REPO.owner &&
         parent.name === SOURCE_REPO.name
       ) {
-        return {
-          owner: userLogin,
-          repoName: SOURCE_REPO.name,
-          forkUrl: response.data.html_url,
-          forkStatus: "exists",
-          defaultBranch: response.data.default_branch || "main",
-          createdAt: response.data.created_at
-            ? new Date(response.data.created_at)
-            : undefined,
-        };
+        return true;
       }
     }
 
-    return null;
+    return false;
   } catch (error: unknown) {
     // Repository doesn't exist or is not accessible
     if (error && typeof error === "object" && "status" in error) {
       const status = error.status as number;
       if (status === 404) {
-        return null;
+        return false;
       }
     }
     // Wrap non-Error objects in an Error
@@ -67,7 +59,7 @@ export async function checkForkExists(
       throw error;
     }
     throw new Error(
-      `Failed to check fork existence: ${JSON.stringify(error)}`,
+      `Failed to check if repository is fork: ${JSON.stringify(error)}`,
     );
   }
 }
