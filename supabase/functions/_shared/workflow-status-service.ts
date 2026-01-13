@@ -61,7 +61,7 @@ export class WorkflowStatusService {
     const octokit = await this.githubClient.getAuthenticatedOctokit(session);
 
     // Sanitize file name
-    const sanitizedFileName = sanitizeFileName(fileName);
+    const sanitizedFileName = deps.sanitizeFileName(fileName);
 
     // Get the most recent workflow run for the register workflow
     // For PoC, we assume one upload at a time, so the most recent run is the one we want
@@ -78,7 +78,7 @@ export class WorkflowStatusService {
 
     // Get the most recent run
     const mostRecentRun = runs.data.workflow_runs[0];
-    const runStatus = await getWorkflowRunById(
+    const runStatus = await deps.getWorkflowRunById(
       octokit,
       session.userLogin,
       session.repoName,
