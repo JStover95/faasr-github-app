@@ -4,7 +4,10 @@
 
 import { assertEquals, assertRejects } from "@std/assert";
 import { stub } from "@std/testing/mock";
-import { GitHubClientService, deps } from "../../functions/_shared/github-client.ts";
+import {
+  deps,
+  GitHubClientService,
+} from "../../functions/_shared/github-client.ts";
 import { createMockOctokit } from "../test-utils.ts";
 import type { UserSession } from "../../functions/_shared/types.ts";
 
@@ -13,10 +16,10 @@ Deno.test("getAuthenticatedOctokit - should return authenticated Octokit instanc
   const getInstallationTokenStub = stub(
     deps,
     "getInstallationToken",
-    async () => ({
+    async () => (await Promise.resolve({
       token: "test-token",
       expiresAt: "2024-01-01T00:00:00Z",
-    }),
+    })),
   );
   const octokitStub = stub(deps, "Octokit", () => mockOctokit);
 
@@ -56,10 +59,10 @@ Deno.test("getAuthenticatedOctokit - should call getInstallationToken with corre
       capturedAppId = appId;
       capturedPrivateKey = privateKey;
       capturedInstallationId = installationId;
-      return {
+      return await Promise.resolve({
         token: "test-token",
         expiresAt: "2024-01-01T00:00:00Z",
-      };
+      });
     },
   );
   const octokitStub = stub(deps, "Octokit", () => mockOctokit);
@@ -96,12 +99,13 @@ Deno.test("getAuthenticatedOctokit - should create Octokit with installation tok
   const getInstallationTokenStub = stub(
     deps,
     "getInstallationToken",
-    async () => ({
+    async () => (await Promise.resolve({
       token: "test-token",
       expiresAt: "2024-01-01T00:00:00Z",
-    }),
+    })),
   );
-  const octokitStub = stub(deps, "Octokit", (config: { auth?: string }) => {
+  // deno-lint-ignore no-explicit-any
+  const octokitStub = stub(deps, "Octokit", (config: any) => {
     capturedAuth = config.auth || null;
     return mockOctokit;
   });
@@ -134,7 +138,8 @@ Deno.test("getAuthenticatedOctokit - should throw error when authentication fail
     deps,
     "getInstallationToken",
     async () => {
-      throw new Error("Authentication failed");
+      // deno-lint-ignore no-explicit-any
+      return await Promise.reject(new Error("Authentication failed")) as any;
     },
   );
 
