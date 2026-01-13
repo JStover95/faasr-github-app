@@ -60,6 +60,7 @@ Deno.test("isFork - should return false when repo is fork of different repo", as
 Deno.test("isFork - should return false when repo doesn't exist (404)", async () => {
   const mockOctokit = createMockOctokit();
   const error = new Error("Not found");
+  // deno-lint-ignore no-explicit-any
   (error as any).status = 404;
 
   mockOctokit.withRestResponse("repos.get", () => {
@@ -74,6 +75,7 @@ Deno.test("isFork - should return false when repo doesn't exist (404)", async ()
 Deno.test("isFork - should throw error for non-404 API errors", async () => {
   const mockOctokit = createMockOctokit();
   const error = new Error("Internal server error");
+  // deno-lint-ignore no-explicit-any
   (error as any).status = 500;
 
   mockOctokit.withRestResponse("repos.get", () => {
