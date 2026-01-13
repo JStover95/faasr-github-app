@@ -5,14 +5,11 @@
 import { assertEquals } from "@std/assert";
 import { stub } from "@std/testing/mock";
 import {
-  createSupabaseClient,
   clearCachedClient,
+  createSupabaseClient,
   deps,
 } from "../../functions/_shared/supabase-client.ts";
-import {
-  saveEnvState,
-  restoreEnvState,
-} from "../test-utils.ts";
+import { restoreEnvState, saveEnvState } from "../test-utils.ts";
 
 Deno.test("createSupabaseClient - should create client with env vars", () => {
   const savedEnv = saveEnvState([
@@ -33,6 +30,7 @@ Deno.test("createSupabaseClient - should create client with env vars", () => {
       capturedUrl = url;
       capturedKey = key;
       capturedOptions = options;
+      // deno-lint-ignore no-explicit-any
       return mockClient as any;
     },
   );
@@ -45,7 +43,8 @@ Deno.test("createSupabaseClient - should create client with env vars", () => {
 
     const client = createSupabaseClient();
 
-    assertEquals(client, mockClient);
+    // deno-lint-ignore no-explicit-any
+    assertEquals(client, mockClient as any);
     assertEquals(capturedUrl, "https://test.supabase.co");
     assertEquals(capturedKey, "test-service-key");
     assertEquals(
@@ -72,6 +71,7 @@ Deno.test("createSupabaseClient - should return cached client on subsequent call
 
   const createClientStub = stub(deps, "createClient", () => {
     callCount++;
+    // deno-lint-ignore no-explicit-any
     return mockClient as any;
   });
 
@@ -107,6 +107,7 @@ Deno.test("createSupabaseClient - should use SUPABASE_URL from env", () => {
     "createClient",
     (url: string) => {
       capturedUrl = url;
+      // deno-lint-ignore no-explicit-any
       return {} as any;
     },
   );
@@ -141,6 +142,7 @@ Deno.test("createSupabaseClient - should use SUPABASE_SERVICE_ROLE_KEY from env"
     "createClient",
     (_url: string, key: string) => {
       capturedKey = key;
+      // deno-lint-ignore no-explicit-any
       return {} as any;
     },
   );
@@ -175,6 +177,7 @@ Deno.test("createSupabaseClient - should set Authorization header with SUPABASE_
     "createClient",
     (_url: string, _key: string, options?: unknown) => {
       capturedOptions = options;
+      // deno-lint-ignore no-explicit-any
       return {} as any;
     },
   );
@@ -210,6 +213,7 @@ Deno.test("clearCachedClient - should clear cached client", () => {
 
   const createClientStub = stub(deps, "createClient", () => {
     callCount++;
+    // deno-lint-ignore no-explicit-any
     return {} as any;
   });
 
@@ -244,6 +248,7 @@ Deno.test("clearCachedClient - should allow next call to create new client", () 
   let clientIndex = 0;
 
   const createClientStub = stub(deps, "createClient", () => {
+    // deno-lint-ignore no-explicit-any
     return (clientIndex++ === 0 ? mockClient1 : mockClient2) as any;
   });
 
@@ -257,8 +262,10 @@ Deno.test("clearCachedClient - should allow next call to create new client", () 
     clearCachedClient();
     const client2 = createSupabaseClient();
 
-    assertEquals(client1, mockClient1);
-    assertEquals(client2, mockClient2);
+    // deno-lint-ignore no-explicit-any
+    assertEquals(client1, mockClient1 as any);
+    // deno-lint-ignore no-explicit-any
+    assertEquals(client2, mockClient2 as any);
     assertEquals(client1 !== client2, true);
   } finally {
     createClientStub.restore();
