@@ -5,20 +5,19 @@
 import { assertEquals } from "@std/assert";
 import { stub } from "@std/testing/mock";
 import {
-  getUserSession,
-  parseFormData,
-  handleUpload,
-  handleStatus,
-  handler,
   deps,
+  getUserSession,
+  handler,
+  handleStatus,
+  handleUpload,
+  parseFormData,
 } from "../../functions/workflows/handler.ts";
 import {
-  createMockSupabaseClient,
   createMockOctokit,
-  saveEnvState,
+  createMockSupabaseClient,
   restoreEnvState,
+  saveEnvState,
 } from "../test-utils.ts";
-import type { UserSession } from "../../functions/_shared/types.ts";
 
 Deno.test("getUserSession - should return user session from Supabase", async () => {
   const mockSupabase = createMockSupabaseClient();
@@ -39,10 +38,11 @@ Deno.test("getUserSession - should return user session from Supabase", async () 
     error: null,
   }));
 
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
-  (mockSupabase as any).rpc = async (fn: string, args: unknown) => {
-    return mockSupabase.rpc(fn, args);
-  };
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
 
   try {
     const session = await getUserSession();
@@ -63,7 +63,11 @@ Deno.test("getUserSession - should return null when user not authenticated", asy
     error: new Error("Not authenticated"),
   });
 
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
 
   try {
     const session = await getUserSession();
@@ -85,10 +89,11 @@ Deno.test("getUserSession - should return null when installation not found", asy
     error: new Error("Not found"),
   }));
 
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
-  (mockSupabase as any).rpc = async (fn: string, args: unknown) => {
-    return mockSupabase.rpc(fn, args);
-  };
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
 
   try {
     const session = await getUserSession();
@@ -115,10 +120,11 @@ Deno.test("getUserSession - should return null when installation data incomplete
     error: null,
   }));
 
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
-  (mockSupabase as any).rpc = async (fn: string, args: unknown) => {
-    return mockSupabase.rpc(fn, args);
-  };
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
 
   try {
     const session = await getUserSession();
@@ -200,17 +206,19 @@ Deno.test("handleUpload - should upload workflow file successfully", async () =>
 
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
   };
   const mockUploadService = {
-    uploadWorkflow: async () => ({
-      fileName: "test-workflow.json",
-      commitSha: "abc123",
-    }),
-    triggerRegistration: async () => ({
-      workflowRunId: 123,
-      workflowRunUrl: "https://github.com/test/repo/actions/runs/123",
-    }),
+    uploadWorkflow: async () =>
+      await Promise.resolve({
+        fileName: "test-workflow.json",
+        commitSha: "abc123",
+      }),
+    triggerRegistration: async () =>
+      await Promise.resolve({
+        workflowRunId: 123,
+        workflowRunUrl: "https://github.com/test/repo/actions/runs/123",
+      }),
   };
 
   const getConfigStub = stub(deps, "getConfig", () => ({
@@ -218,12 +226,21 @@ Deno.test("handleUpload - should upload workflow file successfully", async () =>
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
-  const githubClientStub = stub(deps, "GitHubClientService", () => mockGithubClient);
-  const uploadServiceStub = stub(deps, "WorkflowUploadService", () => mockUploadService);
-  (mockSupabase as any).rpc = async (fn: string, args: unknown) => {
-    return mockSupabase.rpc(fn, args);
-  };
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
+  const githubClientStub = stub(
+    deps,
+    "GitHubClientService",
+    () => mockGithubClient,
+  );
+  const uploadServiceStub = stub(
+    deps,
+    "WorkflowUploadService",
+    () => mockUploadService,
+  );
 
   try {
     const formData = new FormData();
@@ -267,7 +284,11 @@ Deno.test("handleUpload - should return 401 when not authenticated", async () =>
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
 
   try {
     const request = new Request("https://example.com/workflows/upload", {
@@ -312,10 +333,11 @@ Deno.test("handleUpload - should return 400 when file missing", async () => {
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
-  (mockSupabase as any).rpc = async (fn: string, args: unknown) => {
-    return mockSupabase.rpc(fn, args);
-  };
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
 
   try {
     const formData = new FormData();
@@ -359,18 +381,19 @@ Deno.test("handleStatus - should return workflow status", async () => {
 
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
   };
   const mockStatusService = {
-    getWorkflowStatus: async () => ({
-      fileName: "test-workflow.json",
-      status: "success",
-      workflowRunId: 123,
-      workflowRunUrl: "https://github.com/test/repo/actions/runs/123",
-      errorMessage: null,
-      triggeredAt: "2024-01-01T00:00:00Z",
-      completedAt: "2024-01-01T01:00:00Z",
-    }),
+    getWorkflowStatus: async () =>
+      await Promise.resolve({
+        fileName: "test-workflow.json",
+        status: "success",
+        workflowRunId: 123,
+        workflowRunUrl: "https://github.com/test/repo/actions/runs/123",
+        errorMessage: null,
+        triggeredAt: "2024-01-01T00:00:00Z",
+        completedAt: "2024-01-01T01:00:00Z",
+      }),
   };
 
   const getConfigStub = stub(deps, "getConfig", () => ({
@@ -378,12 +401,21 @@ Deno.test("handleStatus - should return workflow status", async () => {
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
-  const githubClientStub = stub(deps, "GitHubClientService", () => mockGithubClient);
-  const statusServiceStub = stub(deps, "WorkflowStatusService", () => mockStatusService);
-  (mockSupabase as any).rpc = async (fn: string, args: unknown) => {
-    return mockSupabase.rpc(fn, args);
-  };
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
+  const githubClientStub = stub(
+    deps,
+    "GitHubClientService",
+    () => mockGithubClient,
+  );
+  const statusServiceStub = stub(
+    deps,
+    "WorkflowStatusService",
+    () => mockStatusService,
+  );
 
   try {
     const response = await handleStatus("test-workflow.json");
@@ -416,7 +448,11 @@ Deno.test("handleStatus - should return 401 when not authenticated", async () =>
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
 
   try {
     const response = await handleStatus("test-workflow.json");
@@ -454,17 +490,19 @@ Deno.test("handler - should route to handleUpload for POST /workflows/upload", a
 
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
   };
   const mockUploadService = {
-    uploadWorkflow: async () => ({
-      fileName: "test-workflow.json",
-      commitSha: "abc123",
-    }),
-    triggerRegistration: async () => ({
-      workflowRunId: 123,
-      workflowRunUrl: "https://github.com/test/repo/actions/runs/123",
-    }),
+    uploadWorkflow: async () =>
+      await Promise.resolve({
+        fileName: "test-workflow.json",
+        commitSha: "abc123",
+      }),
+    triggerRegistration: async () =>
+      await Promise.resolve({
+        workflowRunId: 123,
+        workflowRunUrl: "https://github.com/test/repo/actions/runs/123",
+      }),
   };
 
   const getConfigStub = stub(deps, "getConfig", () => ({
@@ -472,12 +510,21 @@ Deno.test("handler - should route to handleUpload for POST /workflows/upload", a
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
-  const githubClientStub = stub(deps, "GitHubClientService", () => mockGithubClient);
-  const uploadServiceStub = stub(deps, "WorkflowUploadService", () => mockUploadService);
-  (mockSupabase as any).rpc = async (fn: string, args: unknown) => {
-    return mockSupabase.rpc(fn, args);
-  };
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
+  const githubClientStub = stub(
+    deps,
+    "GitHubClientService",
+    () => mockGithubClient,
+  );
+  const uploadServiceStub = stub(
+    deps,
+    "WorkflowUploadService",
+    () => mockUploadService,
+  );
 
   try {
     const formData = new FormData();
@@ -486,10 +533,13 @@ Deno.test("handler - should route to handleUpload for POST /workflows/upload", a
     });
     formData.append("file", file);
 
-    const request = new Request("https://example.com/functions/v1/workflows/upload", {
-      method: "POST",
-      body: formData,
-    });
+    const request = new Request(
+      "https://example.com/functions/v1/workflows/upload",
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
 
     const response = await handler(request);
     const body = await response.json();
@@ -527,18 +577,19 @@ Deno.test("handler - should route to handleStatus for GET /workflows/status/{fil
 
   const mockOctokit = createMockOctokit();
   const mockGithubClient = {
-    getAuthenticatedOctokit: async () => mockOctokit,
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
   };
   const mockStatusService = {
-    getWorkflowStatus: async () => ({
-      fileName: "test-workflow.json",
-      status: "success",
-      workflowRunId: 123,
-      workflowRunUrl: "https://github.com/test/repo/actions/runs/123",
-      errorMessage: null,
-      triggeredAt: "2024-01-01T00:00:00Z",
-      completedAt: "2024-01-01T01:00:00Z",
-    }),
+    getWorkflowStatus: async () =>
+      await Promise.resolve({
+        fileName: "test-workflow.json",
+        status: "success",
+        workflowRunId: 123,
+        workflowRunUrl: "https://github.com/test/repo/actions/runs/123",
+        errorMessage: null,
+        triggeredAt: "2024-01-01T00:00:00Z",
+        completedAt: "2024-01-01T01:00:00Z",
+      }),
   };
 
   const getConfigStub = stub(deps, "getConfig", () => ({
@@ -546,17 +597,29 @@ Deno.test("handler - should route to handleStatus for GET /workflows/status/{fil
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
-  const createSupabaseStub = stub(deps, "createSupabaseClient", () => mockSupabase);
-  const githubClientStub = stub(deps, "GitHubClientService", () => mockGithubClient);
-  const statusServiceStub = stub(deps, "WorkflowStatusService", () => mockStatusService);
-  (mockSupabase as any).rpc = async (fn: string, args: unknown) => {
-    return mockSupabase.rpc(fn, args);
-  };
+  const createSupabaseStub = stub(
+    deps,
+    "createSupabaseClient",
+    () => mockSupabase,
+  );
+  const githubClientStub = stub(
+    deps,
+    "GitHubClientService",
+    () => mockGithubClient,
+  );
+  const statusServiceStub = stub(
+    deps,
+    "WorkflowStatusService",
+    () => mockStatusService,
+  );
 
   try {
-    const request = new Request("https://example.com/functions/v1/workflows/status/test-workflow.json", {
-      method: "GET",
-    });
+    const request = new Request(
+      "https://example.com/functions/v1/workflows/status/test-workflow.json",
+      {
+        method: "GET",
+      },
+    );
 
     const response = await handler(request);
     const body = await response.json();
