@@ -4,7 +4,7 @@ CREATE TABLE public.profiles (
   gh_user_login TEXT,
   gh_user_id INTEGER,
   gh_avatar_url TEXT,
-  gh_repo_name TEXT
+  gh_repo_name TEXT,
 
   PRIMARY KEY (id)
 );
