@@ -329,8 +329,9 @@ export async function handler(req: Request): Promise<Response> {
   const referer = req.headers.get("referer") || "none";
 
   // Extract path after /functions/v1
-  const pathMatch = url.pathname.match(/\/functions\/v1(\/.*)$/);
-  const path = pathMatch ? pathMatch[1] : url.pathname;
+  // const pathMatch = url.pathname.match(/\/functions\/v1(\/.*)$/);
+  // const path = pathMatch ? pathMatch[1] : url.pathname;
+  const { path } = await req.json();
 
   console.log("[INSTALL] Request received", {
     method: req.method,

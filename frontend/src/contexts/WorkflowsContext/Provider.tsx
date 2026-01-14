@@ -90,17 +90,6 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
   }, []);
 
   /**
-   * Get Supabase functions base URL
-   */
-  const getFunctionsBaseUrl = useCallback(() => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (!supabaseUrl) {
-      throw new Error("VITE_SUPABASE_URL is not defined");
-    }
-    return `${supabaseUrl}/functions/v1`;
-  }, []);
-
-  /**
    * Check if GitHub App is installed
    */
   const checkInstallation = useCallback(async () => {
@@ -190,35 +179,23 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
     }));
 
     try {
-      const functionsBaseUrl = getFunctionsBaseUrl();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        throw new Error("Not authenticated");
-      }
-
-      const response = await fetch(`${functionsBaseUrl}/install/auth/install`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
+      const { data, error } = await supabase.functions.invoke("install", {
+        body: { path: "/auth/install" },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || `HTTP ${response.status}: ${response.statusText}`
-        );
+      if (error) {
+        throw new Error(error.message || "Failed to initiate installation");
       }
 
-      const data = await response.json();
-
-      if (data.success && data.redirectUrl) {
+      if (
+        data &&
+        typeof data === "object" &&
+        "success" in data &&
+        data.success &&
+        "redirectUrl" in data
+      ) {
         // Redirect to GitHub
-        window.location.href = data.redirectUrl;
+        window.location.href = data.redirectUrl as string;
       } else {
         throw new Error("Failed to get installation URL");
       }
@@ -234,7 +211,7 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
       }));
       toastActions.showToast(errorMessage, "error");
     }
-  }, [supabase, getFunctionsBaseUrl, toastActions]);
+  }, [supabase, toastActions]);
 
   /**
    * Poll registration status
@@ -260,40 +237,27 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
 
       const checkStatus = async () => {
         try {
-          const functionsBaseUrl = getFunctionsBaseUrl();
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
+          const { data, error } = await supabase.functions.invoke("workflows", {
+            body: { path: `/workflows/status/${encodeURIComponent(fileName)}` },
+          });
 
-          if (!session) {
-            throw new Error("Not authenticated");
-          }
-
-          const encodedFileName = encodeURIComponent(fileName);
-          const response = await fetch(
-            `${functionsBaseUrl}/workflows/status/${encodedFileName}`,
-            {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${session.access_token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-
-          if (!response.ok) {
-            if (response.status === 404) {
+          if (error) {
+            // Check if it's a 404 (workflow run not found yet)
+            if (
+              error.message?.includes("404") ||
+              error.message?.includes("not found")
+            ) {
               // Workflow run not found yet, continue polling
               return;
             }
-            const errorData = await response.json().catch(() => ({}));
             throw new Error(
-              errorData.error ||
-                `HTTP ${response.status}: ${response.statusText}`
+              error.message || "Failed to check registration status"
             );
           }
 
-          const data = await response.json();
+          if (!data || typeof data !== "object") {
+            throw new Error("Invalid response from status check");
+          }
 
           const registrationData: RegistrationData = {
             fileName: data.fileName,
@@ -407,7 +371,7 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
         }
       }, POLL_TIMEOUT_MS);
     },
-    [supabase, getFunctionsBaseUrl, toastActions]
+    [supabase, toastActions]
   );
 
   /**
@@ -423,43 +387,42 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
       }));
 
       try {
-        const functionsBaseUrl = getFunctionsBaseUrl();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        // Read file as array buffer for Supabase functions
+        const fileBuffer = await file.arrayBuffer();
+        const fileBase64 = btoa(
+          String.fromCharCode(...new Uint8Array(fileBuffer))
+        );
 
-        if (!session) {
-          throw new Error("Not authenticated");
-        }
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const response = await fetch(`${functionsBaseUrl}/workflows/upload`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
+        const { data, error } = await supabase.functions.invoke("workflows", {
+          body: {
+            path: "/workflows/upload",
+            file: {
+              name: file.name,
+              content: fileBase64,
+              type: file.type,
+            },
           },
-          body: formData,
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+        if (error) {
           throw new Error(
-            errorData.error ||
-              errorData.details ||
-              `HTTP ${response.status}: ${response.statusText}`
+            (error as any).error ||
+              (error as any).details ||
+              error.message ||
+              "Failed to upload workflow"
           );
         }
 
-        const data = await response.json();
+        if (!data || typeof data !== "object") {
+          throw new Error("Invalid response from upload");
+        }
 
-        if (data.success) {
+        if ("success" in data && data.success) {
           const uploadedFile: UploadedFile = {
-            fileName: data.fileName,
-            commitSha: data.commitSha,
-            workflowRunId: data.workflowRunId,
-            workflowRunUrl: data.workflowRunUrl,
+            fileName: data.fileName as string,
+            commitSha: data.commitSha as string,
+            workflowRunId: data.workflowRunId as number,
+            workflowRunUrl: data.workflowRunUrl as string,
           };
 
           setState((prev) => ({
@@ -478,7 +441,9 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
           // Start polling for registration status
           pollRegistrationStatus(data.fileName);
         } else {
-          throw new Error(data.error || "Upload failed");
+          throw new Error(
+            ("error" in data ? (data.error as string) : null) || "Upload failed"
+          );
         }
       } catch (error) {
         const errorMessage =
@@ -492,7 +457,7 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
         toastActions.showToast(errorMessage, "error");
       }
     },
-    [supabase, getFunctionsBaseUrl, toastActions, pollRegistrationStatus]
+    [supabase, toastActions, pollRegistrationStatus]
   );
 
   /**
