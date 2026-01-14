@@ -2,8 +2,8 @@
  * Workflows Edge Function
  *
  * Handles workflow file upload and registration:
- * - POST /workflows/upload - Uploads workflow JSON file, validates it, commits to GitHub, and triggers workflow dispatch
- * - GET /workflows/status/{fileName} - Returns workflow registration status
+ * - POST - Uploads workflow JSON file, validates it, commits to GitHub, and triggers workflow dispatch
+ * - GET - Returns workflow registration status (requires ?filename= query param)
  */
 
 import { GitHubClientService } from "../_shared/github-client.ts";
@@ -79,7 +79,7 @@ export async function parseFormData(req: Request): Promise<{
 }
 
 /**
- * Handle POST /workflows/upload - Upload and register workflow JSON file
+ * Handle POST - Upload and register workflow JSON file
  */
 export async function handleUpload(req: Request): Promise<Response> {
   const { githubAppId, githubPrivateKey } = deps.getConfig();
@@ -231,9 +231,28 @@ export async function handleUpload(req: Request): Promise<Response> {
 }
 
 /**
- * Handle GET /workflows/status/{fileName} - Get workflow registration status
+ * Handle GET - Get workflow registration status
+ * Requires ?filename= query parameter
  */
-export async function handleStatus(fileName: string): Promise<Response> {
+export async function handleStatus(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const fileName = url.searchParams.get("filename");
+
+  if (!fileName) {
+    console.warn(
+      "[WORKFLOWS] Status request failed: filename parameter required",
+    );
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "filename parameter is required",
+      }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
   const { githubAppId, githubPrivateKey } = deps.getConfig();
 
   try {
@@ -346,14 +365,8 @@ export async function handler(req: Request): Promise<Response> {
   const userAgent = req.headers.get("user-agent") || "unknown";
   const referer = req.headers.get("referer") || "none";
 
-  // Extract path after /functions/v1
-  // const pathMatch = url.pathname.match(/\/functions\/v1(\/.*)$/);
-  // const path = pathMatch ? pathMatch[1] : url.pathname;
-  const { path } = await req.json();
-
   console.log("[WORKFLOWS] Request received", {
     method: req.method,
-    path,
     fullPath: url.pathname,
     userAgent,
     referer,
@@ -361,46 +374,22 @@ export async function handler(req: Request): Promise<Response> {
   });
 
   try {
-    // Route to appropriate handler
-    if (path === "/workflows/upload" && req.method === "POST") {
+    // Route based on HTTP method
+    if (req.method === "POST") {
       return await handleUpload(req);
-    } else if (
-      path.startsWith("/workflows/status/") &&
-      req.method === "GET"
-    ) {
-      const fileNameMatch = path.match(/\/workflows\/status\/(.+)$/);
-      if (!fileNameMatch) {
-        console.warn(
-          "[WORKFLOWS] Status request failed: File name is required",
-          {
-            path,
-          },
-        );
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: "File name is required",
-          }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
-      }
-      const fileName = decodeURIComponent(fileNameMatch[1]);
-      return await handleStatus(fileName);
+    } else if (req.method === "GET") {
+      return await handleStatus(req);
     } else {
-      console.warn("[WORKFLOWS] Route not found", {
+      console.warn("[WORKFLOWS] Method not allowed", {
         method: req.method,
-        path,
       });
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Not found",
+          error: "Method not allowed",
         }),
         {
-          status: 404,
+          status: 405,
           headers: { "Content-Type": "application/json" },
         },
       );
@@ -408,7 +397,6 @@ export async function handler(req: Request): Promise<Response> {
   } catch (error) {
     console.error("[WORKFLOWS] Edge Function error", {
       method: req.method,
-      path,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),

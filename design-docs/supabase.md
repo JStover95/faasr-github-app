@@ -2,6 +2,42 @@
 
 This document outlines design patterns and best practices for Supabase Edge Functions in this codebase. These patterns ensure maintainability, testability, and proper error handling.
 
+## Routing Constraints
+
+Supabase Edge Functions do not support nested RESTful path patterns (e.g., `/user/{id}/profile`). Each edge function must have a single URL path (e.g., `/functions/v1/install` or `/functions/v1/workflows`). Routing should be based on HTTP methods and query parameters rather than path segments.
+
+**Best Practices:**
+
+- Route based on HTTP method (GET, POST, PUT, DELETE)
+- Use query parameters for resource identifiers (e.g., `?filename=workflow.json`)
+- Separate concerns into different edge functions rather than using nested paths
+- Return 405 (Method Not Allowed) for unsupported HTTP methods
+
+**Example:**
+
+```typescript
+// ✅ Good: Route by HTTP method
+export async function handler(req: Request): Promise<Response> {
+  if (req.method === "GET") {
+    return handleGet(req);
+  } else if (req.method === "POST") {
+    return handlePost(req);
+  } else {
+    return new Response(
+      JSON.stringify({ success: false, error: "Method not allowed" }),
+      { status: 405, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// ✅ Good: Use query params for identifiers
+const url = new URL(req.url);
+const filename = url.searchParams.get("filename");
+
+// ❌ Bad: Nested path routing (not supported by Supabase)
+if (path === "/workflows/status/filename.json") { ... }
+```
+
 ## Design Patterns
 
 ### 1. Custom Error Classes (`_shared/errors.ts`)
@@ -88,13 +124,32 @@ function createAnthropicClient() {
 - Clear entry point for the edge function
 - Centralized error handling
 - Separation of concerns (handler vs. business logic)
+- HTTP method-based routing
 
 **Example:**
 
 ```typescript
 export async function handler(req: Request) {
+  const url = new URL(req.url);
+  
+  console.log("[FUNCTION] Request received", {
+    method: req.method,
+    fullPath: url.pathname,
+    timestamp: new Date().toISOString(),
+  });
+
   try {
-    // ... initialization and execution
+    // Route based on HTTP method
+    if (req.method === "GET") {
+      return await handleGet(req);
+    } else if (req.method === "POST") {
+      return await handlePost(req);
+    } else {
+      return new Response(
+        JSON.stringify({ success: false, error: "Method not allowed" }),
+        { status: 405, headers: { "Content-Type": "application/json" } }
+      );
+    }
   } catch (err) {
     // ... error handling
   }
@@ -148,16 +203,35 @@ A typical Supabase Edge Function should follow this structure:
 ```plaintext
 function-name/
   ├── index.ts          # Deno.serve entry point only
-  ├── handler.ts        # Main request handler with error handling
-  ├── agent.ts          # Business logic (if applicable)
+  ├── handler.ts        # Main request handler with HTTP method routing
   ├── config.ts         # Configuration management
-  ├── tools.ts          # Tool definitions (if applicable)
-  ├── deps.ts           # Dependency imports
   └── deno.json         # Deno configuration
 
 _shared/
-  └── errors.ts         # Shared error classes
+  └── errors.ts         # Shared error classes (if needed)
+  └── *.ts              # Other shared utilities
 ```
+
+## Example Functions
+
+### Install Function (GET only)
+
+- **URL**: `/functions/v1/install`
+- **Method**: GET
+- **Purpose**: Initiate GitHub App installation
+
+### Callback Function (GET only)
+
+- **URL**: `/functions/v1/callback?installation_id=123`
+- **Method**: GET
+- **Purpose**: Handle OAuth callback from GitHub
+
+### Workflows Function (GET and POST)
+
+- **URL**: `/functions/v1/workflows`
+- **Methods**:
+  - GET with `?filename=workflow.json` - Get workflow status
+  - POST with FormData - Upload workflow
 
 ## Summary
 

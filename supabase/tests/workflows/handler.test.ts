@@ -418,7 +418,13 @@ Deno.test("handleStatus - should return workflow status", async () => {
   );
 
   try {
-    const response = await handleStatus("test-workflow.json");
+    const request = new Request(
+      "https://example.com/workflows?filename=test-workflow.json",
+      {
+        method: "GET",
+      },
+    );
+    const response = await handleStatus(request);
     const body = await response.json();
 
     assertEquals(response.status, 200);
@@ -430,6 +436,31 @@ Deno.test("handleStatus - should return workflow status", async () => {
     createSupabaseStub.restore();
     githubClientStub.restore();
     statusServiceStub.restore();
+    restoreEnvState(savedEnv);
+  }
+});
+
+Deno.test("handleStatus - should return 400 when filename missing", async () => {
+  const savedEnv = saveEnvState(["FRONTEND_URL"]);
+
+  const getConfigStub = stub(deps, "getConfig", () => ({
+    githubAppId: "12345",
+    githubPrivateKey: "test-key",
+    frontendUrl: "https://frontend.example.com",
+  }));
+
+  try {
+    const request = new Request("https://example.com/workflows", {
+      method: "GET",
+    });
+    const response = await handleStatus(request);
+    const body = await response.json();
+
+    assertEquals(response.status, 400);
+    assertEquals(body.success, false);
+    assertEquals(body.error, "filename parameter is required");
+  } finally {
+    getConfigStub.restore();
     restoreEnvState(savedEnv);
   }
 });
@@ -455,7 +486,13 @@ Deno.test("handleStatus - should return 401 when not authenticated", async () =>
   );
 
   try {
-    const response = await handleStatus("test-workflow.json");
+    const request = new Request(
+      "https://example.com/workflows?filename=test-workflow.json",
+      {
+        method: "GET",
+      },
+    );
+    const response = await handleStatus(request);
     const body = await response.json();
 
     assertEquals(response.status, 401);
@@ -468,7 +505,7 @@ Deno.test("handleStatus - should return 401 when not authenticated", async () =>
   }
 });
 
-Deno.test("handler - should route to handleUpload for POST /workflows/upload", async () => {
+Deno.test("handler - should route to handleUpload for POST", async () => {
   const savedEnv = saveEnvState(["FRONTEND_URL"]);
 
   const mockSupabase = createMockSupabaseClient();
@@ -534,7 +571,7 @@ Deno.test("handler - should route to handleUpload for POST /workflows/upload", a
     formData.append("file", file);
 
     const request = new Request(
-      "https://example.com/functions/v1/workflows/upload",
+      "https://example.com/functions/v1/workflows",
       {
         method: "POST",
         body: formData,
@@ -555,7 +592,7 @@ Deno.test("handler - should route to handleUpload for POST /workflows/upload", a
   }
 });
 
-Deno.test("handler - should route to handleStatus for GET /workflows/status/{fileName}", async () => {
+Deno.test("handler - should route to handleStatus for GET", async () => {
   const savedEnv = saveEnvState(["FRONTEND_URL"]);
 
   const mockSupabase = createMockSupabaseClient();
@@ -615,7 +652,7 @@ Deno.test("handler - should route to handleStatus for GET /workflows/status/{fil
 
   try {
     const request = new Request(
-      "https://example.com/functions/v1/workflows/status/test-workflow.json",
+      "https://example.com/functions/v1/workflows?filename=test-workflow.json",
       {
         method: "GET",
       },
@@ -635,7 +672,7 @@ Deno.test("handler - should route to handleStatus for GET /workflows/status/{fil
   }
 });
 
-Deno.test("handler - should return 404 for unknown routes", async () => {
+Deno.test("handler - should return 405 for DELETE requests", async () => {
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
@@ -643,16 +680,39 @@ Deno.test("handler - should return 404 for unknown routes", async () => {
   }));
 
   try {
-    const request = new Request("https://example.com/functions/v1/unknown", {
-      method: "GET",
+    const request = new Request("https://example.com/functions/v1/workflows", {
+      method: "DELETE",
     });
 
     const response = await handler(request);
     const body = await response.json();
 
-    assertEquals(response.status, 404);
+    assertEquals(response.status, 405);
     assertEquals(body.success, false);
-    assertEquals(body.error, "Not found");
+    assertEquals(body.error, "Method not allowed");
+  } finally {
+    getConfigStub.restore();
+  }
+});
+
+Deno.test("handler - should return 405 for PUT requests", async () => {
+  const getConfigStub = stub(deps, "getConfig", () => ({
+    githubAppId: "12345",
+    githubPrivateKey: "test-key",
+    frontendUrl: "https://frontend.example.com",
+  }));
+
+  try {
+    const request = new Request("https://example.com/functions/v1/workflows", {
+      method: "PUT",
+    });
+
+    const response = await handler(request);
+    const body = await response.json();
+
+    assertEquals(response.status, 405);
+    assertEquals(body.success, false);
+    assertEquals(body.error, "Method not allowed");
   } finally {
     getConfigStub.restore();
   }
