@@ -12,6 +12,7 @@ import "./app.css";
 import { SupabaseClientProvider } from "@/contexts/SupabaseClientContext/Provider";
 import { AuthProvider } from "@/contexts/AuthContext/Provider";
 import { ToastProvider } from "@/contexts/ToastContext/Provider";
+import { WorkflowsProvider } from "@/contexts/WorkflowsContext/Provider";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 
 export const links: Route.LinksFunction = () => [
@@ -50,8 +51,10 @@ export default function App() {
     <SupabaseClientProvider>
       <ToastProvider>
         <AuthProvider>
-          <Outlet />
-          <ToastContainer />
+          <WorkflowsProvider>
+            <Outlet />
+            <ToastContainer />
+          </WorkflowsProvider>
         </AuthProvider>
       </ToastProvider>
     </SupabaseClientProvider>
