@@ -1,5 +1,8 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router";
 import type { Route } from "./+types/home";
 import { Header } from "@/components/ui/Header";
+import { useAuthContext } from "@/contexts/AuthContext/use-auth-context";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -12,6 +15,29 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  const navigate = useNavigate();
+  const { state } = useAuthContext();
+
+  useEffect(() => {
+    if (!state.loading && !state.isAuthenticated) {
+      navigate("/login");
+    }
+  }, [state.loading, state.isAuthenticated, navigate]);
+
+  // Don't render until loading is complete
+  if (state.loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-400">Loading...</div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (will redirect)
+  if (!state.isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />

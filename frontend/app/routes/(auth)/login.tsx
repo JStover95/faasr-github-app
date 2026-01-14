@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { useAuthContext } from "@/contexts/AuthContext/use-auth-context";
 import { TextInput } from "@/components/ui/TextInput";
@@ -21,16 +21,23 @@ interface LoginState {
 
 export default function Login() {
   const navigate = useNavigate();
-  const { actions } = useAuthContext();
-  const [state, setState] = useState<LoginState>({
+  const { state, actions } = useAuthContext();
+  const [localState, setLocalState] = useState<LoginState>({
     email: "",
     password: "",
     errorMessage: null,
     isSubmitting: false,
   });
 
+  // Redirect to home if already authenticated
+  useEffect(() => {
+    if (!state.loading && state.isAuthenticated) {
+      navigate("/");
+    }
+  }, [state.loading, state.isAuthenticated, navigate]);
+
   const handleEmailChange = useCallback((email: string) => {
-    setState((prev) => ({
+    setLocalState((prev) => ({
       ...prev,
       email,
       errorMessage: null,
@@ -38,7 +45,7 @@ export default function Login() {
   }, []);
 
   const handlePasswordChange = useCallback((password: string) => {
-    setState((prev) => ({
+    setLocalState((prev) => ({
       ...prev,
       password,
       errorMessage: null,
@@ -49,26 +56,34 @@ export default function Login() {
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
-      setState((prev) => ({
+      setLocalState((prev) => ({
         ...prev,
         isSubmitting: true,
         errorMessage: null,
       }));
 
-      const result = await actions.signIn(state.email, state.password);
+      const result = await actions.signIn(
+        localState.email,
+        localState.password
+      );
 
       if (result.success) {
         navigate("/");
       } else {
-        setState((prev) => ({
+        setLocalState((prev) => ({
           ...prev,
           isSubmitting: false,
           errorMessage: result.error || "An error occurred while signing in.",
         }));
       }
     },
-    [state.email, state.password, actions, navigate]
+    [localState.email, localState.password, actions, navigate]
   );
+
+  // Don't render if already authenticated (will redirect)
+  if (!state.loading && state.isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -84,33 +99,33 @@ export default function Login() {
               testID={LOGIN_TEST_IDS.emailInput}
               label="Email address"
               type="email"
-              value={state.email}
+              value={localState.email}
               onChange={(e) => handleEmailChange(e.target.value)}
               placeholder="Enter your email"
               required
               autoComplete="email"
-              disabled={state.isSubmitting}
+              disabled={localState.isSubmitting}
             />
             <TextInput
               testID={LOGIN_TEST_IDS.passwordInput}
               label="Password"
               type="password"
-              value={state.password}
+              value={localState.password}
               onChange={(e) => handlePasswordChange(e.target.value)}
               placeholder="Enter your password"
               required
               autoComplete="current-password"
-              disabled={state.isSubmitting}
+              disabled={localState.isSubmitting}
             />
           </div>
 
-          {state.errorMessage && (
+          {localState.errorMessage && (
             <div
               data-testid={LOGIN_TEST_IDS.errorMessage}
               className="text-red-600 dark:text-red-400 text-sm"
               role="alert"
             >
-              {state.errorMessage}
+              {localState.errorMessage}
             </div>
           )}
 
@@ -119,8 +134,8 @@ export default function Login() {
               testID={LOGIN_TEST_IDS.submitButton}
               title="Sign in"
               onClick={() => {}}
-              loading={state.isSubmitting}
-              disabled={state.isSubmitting}
+              loading={localState.isSubmitting}
+              disabled={localState.isSubmitting}
               type="submit"
             />
           </div>
