@@ -41,26 +41,22 @@ This application streamlines the process of uploading workflow files to a forked
 2. Configure the following settings:
    - **Homepage URL**: `https://faasr.io/`
    - **Callback URL**: `http://localhost:5173/callback`
+   - Enable **Request user authorization (OAuth) during installation**
+   - Disable Webhooks
    - Enable necessary permissions:
      - Repository contents: Read & Write
      - Repository metadata: Read-only
      - Workflows: Read & Write
-3. Generate a private key and save it
-4. Note down the following credentials:
+3. Create the app
+4. Generate a private key and save it
+5. Generate a client secret and copy it for configuring the backend later
+6. Note down the following credentials:
    - App ID
    - Client ID
-   - Client Secret
-   - Private Key
 
 ### 2. Setup Supabase
 
-1. Navigate to the `supabase` directory:
-
-   ```bash
-   cd supabase
-   ```
-
-2. Create a `.env` file based on `.env.template` and populate it with your GitHub App information:
+1. Create a `.env` file in the `supabase` directory based on `.env.template` and populate it with your GitHub App information:
 
    ```env
    GITHUB_APP_ID=your_app_id
@@ -70,19 +66,21 @@ This application streamlines the process of uploading workflow files to a forked
    GITHUB_INSTALLATION_URL=https://github.com/apps/<your-app-name>/installations/new
    ```
 
+   **Note:** `GITHUB_PRIVATE_KEY` must be the contents of the private key that you downloaded when creating your app.
+
+2. Navigate to the `supabase` directory:
+
+   ```bash
+   cd supabase
+   ```
+
 3. Start Supabase:
 
    ```bash
    supabase start
    ```
 
-4. Initialize the database:
-
-   ```bash
-   supabase migration up
-   ```
-
-5. Start the backend server:
+4. Start the backend server:
 
    ```bash
    supabase functions serve --env-file .env
@@ -92,20 +90,20 @@ This application streamlines the process of uploading workflow files to a forked
 
 ### 3. Setup Frontend
 
-1. Navigate to the `frontend` directory:
+1. Create a `.env.local` file in the `frontend` directory based on `.env.template` and add your local Supabase credentials:
+
+   ```env
+   VITE_SUPABASE_URL=http://localhost:54321
+   VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+   ```
+
+   You can find the Supabase URL and anon key from the output of `supabase start` in step 2.3
+
+2. In a new terminal navigate to the `frontend` directory:
 
    ```bash
    cd frontend
    ```
-
-2. Create a `.env.local` file based on `.env.template` and add your local Supabase credentials:
-
-   ```env
-   VITE_SUPABASE_URL=http://localhost:54321
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
-
-   You can find the Supabase URL and anon key from the output of `supabase start` in step 2.3
 
 3. Install dependencies:
 
