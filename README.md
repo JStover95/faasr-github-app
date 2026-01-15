@@ -68,11 +68,7 @@ This application streamlines the process of uploading workflow files to a forked
 
    **Note:** `GITHUB_PRIVATE_KEY` must be the contents of the private key that you downloaded when creating your app.
 
-2. Navigate to the `supabase` directory:
-
-   ```bash
-   cd supabase
-   ```
+2. Open a terminal the `supabase` directory.
 
 3. Start Supabase:
 
@@ -94,16 +90,12 @@ This application streamlines the process of uploading workflow files to a forked
 
    ```env
    VITE_SUPABASE_URL=http://localhost:54321
-   VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+   VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
    ```
 
-   You can find the Supabase URL and anon key from the output of `supabase start` in step 2.3
+   You can find the Supabase URL and publishable key from the output of `supabase start` in step 2.3
 
-2. In a new terminal navigate to the `frontend` directory:
-
-   ```bash
-   cd frontend
-   ```
+2. Open a new terminal in the `frontend` directory.
 
 3. Install dependencies:
 

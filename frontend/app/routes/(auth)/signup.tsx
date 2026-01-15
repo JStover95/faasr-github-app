@@ -82,11 +82,8 @@ export default function Signup() {
       );
 
       if (result.success) {
-        toastActions.showToast(
-          "Sign up successful! Please sign in.",
-          "success"
-        );
-        navigate("/login");
+        toastActions.showToast("Sign up successful!", "success");
+        navigate("/");
       } else {
         setLocalState((prev) => ({
           ...prev,
