@@ -190,7 +190,7 @@ export async function handleCallback(req: Request): Promise<Response> {
     );
 
     // Insert GitHub installation into public.profiles
-    const supabase = deps.createSupabaseClient();
+    const supabase = deps.createSupabaseClient(req);
     const { data, error } = await supabase.auth.getUser();
 
     if (error || !data.user) {

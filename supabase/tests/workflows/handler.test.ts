@@ -38,19 +38,28 @@ Deno.test("getUserSession - should return user session from Supabase", async () 
     error: null,
   }));
 
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
-    const session = await getUserSession();
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
+    const request = new Request("https://example.com", {
+      headers: { Authorization: mockJWT },
+    });
+    const session = await getUserSession(request);
 
     assertEquals(session?.installationId, "123");
     assertEquals(session?.userLogin, "test-user");
     assertEquals(session?.userId, 456);
     assertEquals(session?.repoName, "test-repo");
+    assertEquals(capturedRequest, request);
   } finally {
     createSupabaseStub.restore();
   }
@@ -63,16 +72,25 @@ Deno.test("getUserSession - should return null when user not authenticated", asy
     error: new Error("Not authenticated"),
   });
 
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
-    const session = await getUserSession();
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
+    const request = new Request("https://example.com", {
+      headers: { Authorization: mockJWT },
+    });
+    const session = await getUserSession(request);
 
     assertEquals(session, null);
+    assertEquals(capturedRequest, request);
   } finally {
     createSupabaseStub.restore();
   }
@@ -89,16 +107,25 @@ Deno.test("getUserSession - should return null when installation not found", asy
     error: new Error("Not found"),
   }));
 
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
-    const session = await getUserSession();
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
+    const request = new Request("https://example.com", {
+      headers: { Authorization: mockJWT },
+    });
+    const session = await getUserSession(request);
 
     assertEquals(session, null);
+    assertEquals(capturedRequest, request);
   } finally {
     createSupabaseStub.restore();
   }
@@ -120,16 +147,25 @@ Deno.test("getUserSession - should return null when installation data incomplete
     error: null,
   }));
 
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
-    const session = await getUserSession();
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
+    const request = new Request("https://example.com", {
+      headers: { Authorization: mockJWT },
+    });
+    const session = await getUserSession(request);
 
     assertEquals(session, null);
+    assertEquals(capturedRequest, request);
   } finally {
     createSupabaseStub.restore();
   }
@@ -226,10 +262,14 @@ Deno.test("handleUpload - should upload workflow file successfully", async () =>
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
   const githubClientStub = stub(
     deps,
@@ -249,8 +289,10 @@ Deno.test("handleUpload - should upload workflow file successfully", async () =>
     });
     formData.append("file", file);
 
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const request = new Request("https://example.com/workflows/upload", {
       method: "POST",
+      headers: { Authorization: mockJWT },
       body: formData,
     });
 
@@ -261,6 +303,7 @@ Deno.test("handleUpload - should upload workflow file successfully", async () =>
     assertEquals(body.success, true);
     assertEquals(body.fileName, "test-workflow.json");
     assertEquals(body.commitSha, "abc123");
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     createSupabaseStub.restore();
@@ -284,15 +327,21 @@ Deno.test("handleUpload - should return 401 when not authenticated", async () =>
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const request = new Request("https://example.com/workflows/upload", {
       method: "POST",
+      headers: { Authorization: mockJWT },
     });
 
     const response = await handleUpload(request);
@@ -301,6 +350,7 @@ Deno.test("handleUpload - should return 401 when not authenticated", async () =>
     assertEquals(response.status, 401);
     assertEquals(body.success, false);
     assertEquals(body.error, "Authentication required");
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     createSupabaseStub.restore();
@@ -333,16 +383,22 @@ Deno.test("handleUpload - should return 400 when file missing", async () => {
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const formData = new FormData();
     const request = new Request("https://example.com/workflows/upload", {
       method: "POST",
+      headers: { Authorization: mockJWT },
       body: formData,
     });
 
@@ -352,6 +408,7 @@ Deno.test("handleUpload - should return 400 when file missing", async () => {
     assertEquals(response.status, 400);
     assertEquals(body.success, false);
     assertEquals(body.error, "File is required");
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     createSupabaseStub.restore();
@@ -401,10 +458,14 @@ Deno.test("handleStatus - should return workflow status", async () => {
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
   const githubClientStub = stub(
     deps,
@@ -418,10 +479,12 @@ Deno.test("handleStatus - should return workflow status", async () => {
   );
 
   try {
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const request = new Request(
       "https://example.com/workflows?filename=test-workflow.json",
       {
         method: "GET",
+        headers: { Authorization: mockJWT },
       },
     );
     const response = await handleStatus(request);
@@ -431,6 +494,7 @@ Deno.test("handleStatus - should return workflow status", async () => {
     assertEquals(body.fileName, "test-workflow.json");
     assertEquals(body.status, "success");
     assertEquals(body.workflowRunId, 123);
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     createSupabaseStub.restore();
@@ -450,8 +514,10 @@ Deno.test("handleStatus - should return 400 when filename missing", async () => 
   }));
 
   try {
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const request = new Request("https://example.com/workflows", {
       method: "GET",
+      headers: { Authorization: mockJWT },
     });
     const response = await handleStatus(request);
     const body = await response.json();
@@ -479,10 +545,14 @@ Deno.test("handleStatus - should return 401 when not authenticated", async () =>
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
@@ -498,6 +568,7 @@ Deno.test("handleStatus - should return 401 when not authenticated", async () =>
     assertEquals(response.status, 401);
     assertEquals(body.success, false);
     assertEquals(body.error, "Authentication required");
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     createSupabaseStub.restore();
@@ -547,10 +618,14 @@ Deno.test("handler - should route to handleUpload for POST", async () => {
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
   const githubClientStub = stub(
     deps,
@@ -570,10 +645,12 @@ Deno.test("handler - should route to handleUpload for POST", async () => {
     });
     formData.append("file", file);
 
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const request = new Request(
       "https://example.com/functions/v1/workflows",
       {
         method: "POST",
+        headers: { Authorization: mockJWT },
         body: formData,
       },
     );
@@ -583,6 +660,7 @@ Deno.test("handler - should route to handleUpload for POST", async () => {
 
     assertEquals(response.status, 200);
     assertEquals(body.success, true);
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     createSupabaseStub.restore();
@@ -634,10 +712,14 @@ Deno.test("handler - should route to handleStatus for GET", async () => {
     githubPrivateKey: "test-key",
     frontendUrl: "https://frontend.example.com",
   }));
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
   const githubClientStub = stub(
     deps,
@@ -651,10 +733,12 @@ Deno.test("handler - should route to handleStatus for GET", async () => {
   );
 
   try {
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const request = new Request(
       "https://example.com/functions/v1/workflows?filename=test-workflow.json",
       {
         method: "GET",
+        headers: { Authorization: mockJWT },
       },
     );
 
@@ -663,6 +747,7 @@ Deno.test("handler - should route to handleStatus for GET", async () => {
 
     assertEquals(response.status, 200);
     assertEquals(body.fileName, "test-workflow.json");
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     createSupabaseStub.restore();

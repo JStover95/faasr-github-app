@@ -4,30 +4,22 @@ export const deps = {
   createClient,
 };
 
-let cachedClient: SupabaseClient | null = null;
-
 // Supabase client is an exception to the `getConfig` pattern because the required
 // config is guaranteed by the Edge Runtime.
-export function createSupabaseClient() {
-  if (cachedClient) {
-    return cachedClient;
-  }
+export function createSupabaseClient(req: Request): SupabaseClient {
+  // Extract Authorization header from request (contains user JWT)
+  const authHeader = req.headers.get("Authorization") ?? "";
 
+  // Create client with ANON_KEY and user's JWT token
   const client = deps.createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
     {
       global: {
-        headers: { Authorization: Deno.env.get("SUPABASE_ANON_KEY") ?? "" },
+        headers: { Authorization: authHeader },
       },
     },
   );
 
-  cachedClient = client;
-
   return client;
-}
-
-export function clearCachedClient() {
-  cachedClient = null;
 }

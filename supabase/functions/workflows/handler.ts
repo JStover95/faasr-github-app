@@ -28,8 +28,8 @@ export const deps = {
 /**
  * Get user session from Supabase Auth
  */
-export async function getUserSession(): Promise<UserSession | null> {
-  const supabase = deps.createSupabaseClient();
+export async function getUserSession(req: Request): Promise<UserSession | null> {
+  const supabase = deps.createSupabaseClient(req);
   const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error || !user) {
@@ -86,7 +86,7 @@ export async function handleUpload(req: Request): Promise<Response> {
 
   try {
     // Validate session
-    const session = await getUserSession();
+    const session = await getUserSession(req);
 
     if (!session) {
       console.warn("[WORKFLOWS] Upload failed: Authentication required");
@@ -259,7 +259,7 @@ export async function handleStatus(req: Request): Promise<Response> {
     // Validate session
     console.log("[WORKFLOWS] Status request for file", { fileName });
 
-    const session = await getUserSession();
+    const session = await getUserSession(req);
     if (!session) {
       console.warn("[WORKFLOWS] Status check failed: Authentication required");
       return new Response(

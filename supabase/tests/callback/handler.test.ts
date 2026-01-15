@@ -17,7 +17,7 @@ import {
 } from "../test-utils.ts";
 import type { GitHubInstallation } from "../../functions/_shared/types.ts";
 
-Deno.test("handleCallback - should redirect to frontend with success on valid installation", async () => {
+Deno.test("handleCallback - should return success on valid installation", async () => {
   const savedEnv = saveEnvState(["FRONTEND_URL"]);
 
   const mockSupabase = createMockSupabaseClient();
@@ -95,23 +95,31 @@ Deno.test("handleCallback - should redirect to frontend with success on valid in
     async () => await Promise.resolve(true),
   );
   const octokitStub = stub(deps, "Octokit", () => mockOctokit);
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const request = new Request(
       "https://example.com/callback?installation_id=123",
+      {
+        headers: { Authorization: mockJWT },
+      },
     );
     const response = await handleCallback(request);
 
-    assertEquals(response.status, 302);
-    const location = response.headers.get("Location");
-    assertEquals(location?.includes("/install"), true);
-    assertEquals(location?.includes("success=true"), true);
-    assertEquals(location?.includes("login=test-user"), true);
+    assertEquals(response.status, 200);
+    const body = await response.json();
+    assertEquals(body.success, true);
+    assertEquals(body.login, "test-user");
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     getInstallationStub.restore();
@@ -125,7 +133,7 @@ Deno.test("handleCallback - should redirect to frontend with success on valid in
   }
 });
 
-Deno.test("handleCallback - should redirect with error when getUser returns error", async () => {
+Deno.test("handleCallback - should return error when getUser returns error", async () => {
   const savedEnv = saveEnvState(["FRONTEND_URL"]);
 
   const mockSupabase = createMockSupabaseClient();
@@ -198,26 +206,32 @@ Deno.test("handleCallback - should redirect with error when getUser returns erro
     async () => await Promise.resolve(true),
   );
   const octokitStub = stub(deps, "Octokit", () => createMockOctokit());
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const request = new Request(
       "https://example.com/callback?installation_id=123",
+      {
+        headers: { Authorization: mockJWT },
+      },
     );
     const response = await handleCallback(request);
 
-    assertEquals(response.status, 302);
-    const location = response.headers.get("Location");
-    assertEquals(location?.includes("/install"), true);
-    assertEquals(location?.includes("error=failed_to_get_user"), true);
-    assertEquals(
-      location?.includes("message=Failed+to+get+user.+Please+try+again."),
-      true,
-    );
+    assertEquals(response.status, 401);
+    const body = await response.json();
+    assertEquals(body.success, false);
+    assertEquals(body.error, "failed_to_get_user");
+    assertEquals(body.message, "Failed to get user. Please try again.");
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     getInstallationStub.restore();
@@ -231,7 +245,7 @@ Deno.test("handleCallback - should redirect with error when getUser returns erro
   }
 });
 
-Deno.test("handleCallback - should redirect with error when getUser returns null user", async () => {
+Deno.test("handleCallback - should return error when getUser returns null user", async () => {
   const savedEnv = saveEnvState(["FRONTEND_URL"]);
 
   const mockSupabase = createMockSupabaseClient();
@@ -304,26 +318,32 @@ Deno.test("handleCallback - should redirect with error when getUser returns null
     async () => await Promise.resolve(true),
   );
   const octokitStub = stub(deps, "Octokit", () => createMockOctokit());
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const request = new Request(
       "https://example.com/callback?installation_id=123",
+      {
+        headers: { Authorization: mockJWT },
+      },
     );
     const response = await handleCallback(request);
 
-    assertEquals(response.status, 302);
-    const location = response.headers.get("Location");
-    assertEquals(location?.includes("/install"), true);
-    assertEquals(location?.includes("error=failed_to_get_user"), true);
-    assertEquals(
-      location?.includes("message=Failed+to+get+user.+Please+try+again."),
-      true,
-    );
+    assertEquals(response.status, 401);
+    const body = await response.json();
+    assertEquals(body.success, false);
+    assertEquals(body.error, "failed_to_get_user");
+    assertEquals(body.message, "Failed to get user. Please try again.");
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     getInstallationStub.restore();
@@ -337,7 +357,7 @@ Deno.test("handleCallback - should redirect with error when getUser returns null
   }
 });
 
-Deno.test("handleCallback - should redirect with error when installation_id missing", async () => {
+Deno.test("handleCallback - should return error when installation_id missing", async () => {
   const savedEnv = saveEnvState(["FRONTEND_URL"]);
 
   const getConfigStub = stub(deps, "getConfig", () => ({
@@ -350,17 +370,18 @@ Deno.test("handleCallback - should redirect with error when installation_id miss
     const request = new Request("https://example.com/callback");
     const response = await handleCallback(request);
 
-    assertEquals(response.status, 302);
-    const location = response.headers.get("Location");
-    assertEquals(location?.includes("/install"), true);
-    assertEquals(location?.includes("error=missing_installation_id"), true);
+    assertEquals(response.status, 400);
+    const body = await response.json();
+    assertEquals(body.success, false);
+    assertEquals(body.error, "missing_installation_id");
+    assertEquals(body.message, "Missing installation ID. Please try installing again.");
   } finally {
     getConfigStub.restore();
     restoreEnvState(savedEnv);
   }
 });
 
-Deno.test("handleCallback - should redirect with error when permissions missing", async () => {
+Deno.test("handleCallback - should return error when permissions missing", async () => {
   const savedEnv = saveEnvState(["FRONTEND_URL"]);
 
   const installation: GitHubInstallation = {
@@ -403,10 +424,14 @@ Deno.test("handleCallback - should redirect with error when permissions missing"
     );
     const response = await handleCallback(request);
 
-    assertEquals(response.status, 302);
-    const location = response.headers.get("Location");
-    assertEquals(location?.includes("/install"), true);
-    assertEquals(location?.includes("error=missing_permissions"), true);
+    assertEquals(response.status, 400);
+    const body = await response.json();
+    assertEquals(body.success, false);
+    assertEquals(body.error, "missing_permissions");
+    assertEquals(
+      body.message,
+      "The app needs additional permissions. Please reinstall with the required permissions.",
+    );
   } finally {
     getConfigStub.restore();
     getInstallationStub.restore();
@@ -415,7 +440,7 @@ Deno.test("handleCallback - should redirect with error when permissions missing"
   }
 });
 
-Deno.test("handleCallback - should redirect with error when fork not found", async () => {
+Deno.test("handleCallback - should return error when fork not found", async () => {
   const savedEnv = saveEnvState(["FRONTEND_URL"]);
 
   const installation: GitHubInstallation = {
@@ -491,10 +516,14 @@ Deno.test("handleCallback - should redirect with error when fork not found", asy
     );
     const response = await handleCallback(request);
 
-    assertEquals(response.status, 302);
-    const location = response.headers.get("Location");
-    assertEquals(location?.includes("/install"), true);
-    assertEquals(location?.includes("error=no_fork_found"), true);
+    assertEquals(response.status, 400);
+    const body = await response.json();
+    assertEquals(body.success, false);
+    assertEquals(body.error, "no_fork_found");
+    assertEquals(
+      body.message,
+      "No fork of the source repository found. Please fork the repository and try again.",
+    );
   } finally {
     getConfigStub.restore();
     getInstallationStub.restore();
@@ -585,22 +614,32 @@ Deno.test("handler - should handle GET request", async () => {
     async () => await Promise.resolve(true),
   );
   const octokitStub = stub(deps, "Octokit", () => mockOctokit);
+  let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
     deps,
     "createSupabaseClient",
-    () => mockSupabase,
+    (req: Request) => {
+      capturedRequest = req;
+      return mockSupabase;
+    },
   );
 
   try {
+    const mockJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
     const request = new Request(
       "https://example.com/functions/v1/callback?installation_id=123",
       {
         method: "GET",
+        headers: { Authorization: mockJWT },
       },
     );
     const response = await handler(request);
 
-    assertEquals(response.status, 302);
+    assertEquals(response.status, 200);
+    const body = await response.json();
+    assertEquals(body.success, true);
+    assertEquals(body.login, "test-user");
+    assertEquals(capturedRequest, request);
   } finally {
     getConfigStub.restore();
     getInstallationStub.restore();
