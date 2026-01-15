@@ -1,7 +1,6 @@
 export interface WorkflowsConfig {
   githubAppId: string;
   githubPrivateKey: string;
-  frontendUrl: string;
 }
 
 let cachedConfig: WorkflowsConfig | null = null;
@@ -13,7 +12,6 @@ export function getConfig(): WorkflowsConfig {
 
   const githubAppId = Deno.env.get("GITHUB_APP_ID");
   const githubPrivateKey = Deno.env.get("GITHUB_PRIVATE_KEY");
-  const frontendUrl = Deno.env.get("FRONTEND_URL");
 
   const missingEnvVars = [];
 
@@ -23,11 +21,8 @@ export function getConfig(): WorkflowsConfig {
   if (!githubPrivateKey) {
     missingEnvVars.push("GITHUB_PRIVATE_KEY");
   }
-  if (!frontendUrl) {
-    missingEnvVars.push("FRONTEND_URL");
-  }
 
-  if (!(githubAppId && githubPrivateKey && frontendUrl)) {
+  if (!(githubAppId && githubPrivateKey)) {
     throw new Error(
       `Missing environment variables: ${missingEnvVars.join(", ")}`,
     );
@@ -36,7 +31,6 @@ export function getConfig(): WorkflowsConfig {
   cachedConfig = {
     githubAppId,
     githubPrivateKey,
-    frontendUrl,
   };
 
   return cachedConfig;

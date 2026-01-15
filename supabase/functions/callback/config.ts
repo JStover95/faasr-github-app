@@ -3,7 +3,6 @@
  */
 
 export interface CallbackConfig {
-  frontendUrl: string;
   githubAppId: string;
   githubPrivateKey: string;
 }
@@ -15,13 +14,8 @@ export function getConfig(): CallbackConfig {
     return cachedConfig;
   }
 
-  const frontendUrl = Deno.env.get("FRONTEND_URL");
   const githubAppId = Deno.env.get("GITHUB_APP_ID");
   const githubPrivateKey = Deno.env.get("GITHUB_PRIVATE_KEY");
-
-  if (!frontendUrl) {
-    throw new Error("FRONTEND_URL is not set");
-  }
 
   if (!githubAppId) {
     throw new Error("GITHUB_APP_ID is not set");
@@ -32,7 +26,6 @@ export function getConfig(): CallbackConfig {
   }
 
   cachedConfig = {
-    frontendUrl,
     githubAppId,
     githubPrivateKey,
   };

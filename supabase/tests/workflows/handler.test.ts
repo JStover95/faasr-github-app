@@ -12,12 +12,7 @@ import {
   handleUpload,
   parseFormData,
 } from "../../functions/workflows/handler.ts";
-import {
-  createMockOctokit,
-  createMockSupabaseClient,
-  restoreEnvState,
-  saveEnvState,
-} from "../test-utils.ts";
+import { createMockOctokit, createMockSupabaseClient } from "../test-utils.ts";
 
 Deno.test("getUserSession - should return user session from Supabase", async () => {
   const mockSupabase = createMockSupabaseClient();
@@ -280,8 +275,6 @@ Deno.test("parseFormData - should return null when custom_containers excluded", 
 });
 
 Deno.test("handleUpload - should upload workflow file successfully", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: { id: "user-123" } },
@@ -326,7 +319,6 @@ Deno.test("handleUpload - should upload workflow file successfully", async () =>
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
 
   let capturedRequest: Request | null = null;
@@ -379,13 +371,10 @@ Deno.test("handleUpload - should upload workflow file successfully", async () =>
     createSupabaseStub.restore();
     githubClientStub.restore();
     uploadServiceStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleUpload - should return 401 when not authenticated", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: null },
@@ -395,7 +384,6 @@ Deno.test("handleUpload - should return 401 when not authenticated", async () =>
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
   let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
@@ -424,13 +412,10 @@ Deno.test("handleUpload - should return 401 when not authenticated", async () =>
   } finally {
     getConfigStub.restore();
     createSupabaseStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleUpload - should return 400 when file missing", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: { id: "user-123" } },
@@ -451,7 +436,6 @@ Deno.test("handleUpload - should return 400 when file missing", async () => {
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
   let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
@@ -482,13 +466,10 @@ Deno.test("handleUpload - should return 400 when file missing", async () => {
   } finally {
     getConfigStub.restore();
     createSupabaseStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleUpload - should pass custom_containers=false to triggerRegistration", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: { id: "user-123" } },
@@ -533,7 +514,6 @@ Deno.test("handleUpload - should pass custom_containers=false to triggerRegistra
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
   let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
@@ -583,13 +563,10 @@ Deno.test("handleUpload - should pass custom_containers=false to triggerRegistra
     createSupabaseStub.restore();
     githubClientStub.restore();
     uploadServiceStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleUpload - should default to undefined when custom_containers excluded", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: { id: "user-123" } },
@@ -634,7 +611,6 @@ Deno.test("handleUpload - should default to undefined when custom_containers exc
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
   let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
@@ -684,13 +660,10 @@ Deno.test("handleUpload - should default to undefined when custom_containers exc
     createSupabaseStub.restore();
     githubClientStub.restore();
     uploadServiceStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleStatus - should return workflow status", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: { id: "user-123" } },
@@ -728,7 +701,6 @@ Deno.test("handleStatus - should return workflow status", async () => {
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
   let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
@@ -772,17 +744,13 @@ Deno.test("handleStatus - should return workflow status", async () => {
     createSupabaseStub.restore();
     githubClientStub.restore();
     statusServiceStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleStatus - should return 400 when filename missing", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
 
   try {
@@ -799,13 +767,10 @@ Deno.test("handleStatus - should return 400 when filename missing", async () => 
     assertEquals(body.error, "filename parameter is required");
   } finally {
     getConfigStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleStatus - should return 401 when not authenticated", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: null },
@@ -815,7 +780,6 @@ Deno.test("handleStatus - should return 401 when not authenticated", async () =>
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
   let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
@@ -844,13 +808,10 @@ Deno.test("handleStatus - should return 401 when not authenticated", async () =>
   } finally {
     getConfigStub.restore();
     createSupabaseStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handler - should route to handleUpload for POST", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: { id: "user-123" } },
@@ -888,7 +849,6 @@ Deno.test("handler - should route to handleUpload for POST", async () => {
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
   let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
@@ -938,13 +898,10 @@ Deno.test("handler - should route to handleUpload for POST", async () => {
     createSupabaseStub.restore();
     githubClientStub.restore();
     uploadServiceStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handler - should route to handleStatus for GET", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: { id: "user-123" } },
@@ -982,7 +939,6 @@ Deno.test("handler - should route to handleStatus for GET", async () => {
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
   let capturedRequest: Request | null = null;
   const createSupabaseStub = stub(
@@ -1025,7 +981,6 @@ Deno.test("handler - should route to handleStatus for GET", async () => {
     createSupabaseStub.restore();
     githubClientStub.restore();
     statusServiceStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
@@ -1033,7 +988,6 @@ Deno.test("handler - should return 405 for DELETE requests", async () => {
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
 
   try {
@@ -1056,7 +1010,6 @@ Deno.test("handler - should return 405 for PUT requests", async () => {
   const getConfigStub = stub(deps, "getConfig", () => ({
     githubAppId: "12345",
     githubPrivateKey: "test-key",
-    frontendUrl: "https://frontend.example.com",
   }));
 
   try {

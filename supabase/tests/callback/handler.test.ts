@@ -9,17 +9,10 @@ import {
   handleCallback,
   handler,
 } from "../../functions/callback/handler.ts";
-import {
-  createMockOctokit,
-  createMockSupabaseClient,
-  restoreEnvState,
-  saveEnvState,
-} from "../test-utils.ts";
+import { createMockOctokit, createMockSupabaseClient } from "../test-utils.ts";
 import type { GitHubInstallation } from "../../functions/_shared/types.ts";
 
 Deno.test("handleCallback - should return success on valid installation", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: { id: "user-123" } },
@@ -46,7 +39,6 @@ Deno.test("handleCallback - should return success on valid installation", async 
   };
 
   const getConfigStub = stub(deps, "getConfig", () => ({
-    frontendUrl: "https://frontend.example.com",
     githubAppId: "12345",
     githubPrivateKey: "test-key",
   }));
@@ -129,13 +121,10 @@ Deno.test("handleCallback - should return success on valid installation", async 
     isForkStub.restore();
     octokitStub.restore();
     createSupabaseStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleCallback - should return error when getUser returns error", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: null },
@@ -157,7 +146,6 @@ Deno.test("handleCallback - should return error when getUser returns error", asy
   };
 
   const getConfigStub = stub(deps, "getConfig", () => ({
-    frontendUrl: "https://frontend.example.com",
     githubAppId: "12345",
     githubPrivateKey: "test-key",
   }));
@@ -241,13 +229,10 @@ Deno.test("handleCallback - should return error when getUser returns error", asy
     isForkStub.restore();
     octokitStub.restore();
     createSupabaseStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleCallback - should return error when getUser returns null user", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: null },
@@ -269,7 +254,6 @@ Deno.test("handleCallback - should return error when getUser returns null user",
   };
 
   const getConfigStub = stub(deps, "getConfig", () => ({
-    frontendUrl: "https://frontend.example.com",
     githubAppId: "12345",
     githubPrivateKey: "test-key",
   }));
@@ -353,15 +337,11 @@ Deno.test("handleCallback - should return error when getUser returns null user",
     isForkStub.restore();
     octokitStub.restore();
     createSupabaseStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleCallback - should return error when installation_id missing", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const getConfigStub = stub(deps, "getConfig", () => ({
-    frontendUrl: "https://frontend.example.com",
     githubAppId: "12345",
     githubPrivateKey: "test-key",
   }));
@@ -374,16 +354,16 @@ Deno.test("handleCallback - should return error when installation_id missing", a
     const body = await response.json();
     assertEquals(body.success, false);
     assertEquals(body.error, "missing_installation_id");
-    assertEquals(body.message, "Missing installation ID. Please try installing again.");
+    assertEquals(
+      body.message,
+      "Missing installation ID. Please try installing again.",
+    );
   } finally {
     getConfigStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleCallback - should return error when permissions missing", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const installation: GitHubInstallation = {
     id: 123,
     account: {
@@ -399,7 +379,6 @@ Deno.test("handleCallback - should return error when permissions missing", async
   };
 
   const getConfigStub = stub(deps, "getConfig", () => ({
-    frontendUrl: "https://frontend.example.com",
     githubAppId: "12345",
     githubPrivateKey: "test-key",
   }));
@@ -436,13 +415,10 @@ Deno.test("handleCallback - should return error when permissions missing", async
     getConfigStub.restore();
     getInstallationStub.restore();
     checkPermissionsStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handleCallback - should return error when fork not found", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const installation: GitHubInstallation = {
     id: 123,
     account: {
@@ -460,7 +436,6 @@ Deno.test("handleCallback - should return error when fork not found", async () =
   const mockOctokit = createMockOctokit();
 
   const getConfigStub = stub(deps, "getConfig", () => ({
-    frontendUrl: "https://frontend.example.com",
     githubAppId: "12345",
     githubPrivateKey: "test-key",
   }));
@@ -532,13 +507,10 @@ Deno.test("handleCallback - should return error when fork not found", async () =
     getReposStub.restore();
     isForkStub.restore();
     octokitStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handler - should handle GET request", async () => {
-  const savedEnv = saveEnvState(["FRONTEND_URL"]);
-
   const mockSupabase = createMockSupabaseClient();
   mockSupabase.withAuthResponse({
     data: { user: { id: "user-123" } },
@@ -565,7 +537,6 @@ Deno.test("handler - should handle GET request", async () => {
   };
 
   const getConfigStub = stub(deps, "getConfig", () => ({
-    frontendUrl: "https://frontend.example.com",
     githubAppId: "12345",
     githubPrivateKey: "test-key",
   }));
@@ -649,13 +620,11 @@ Deno.test("handler - should handle GET request", async () => {
     isForkStub.restore();
     octokitStub.restore();
     createSupabaseStub.restore();
-    restoreEnvState(savedEnv);
   }
 });
 
 Deno.test("handler - should return 405 for POST requests", async () => {
   const getConfigStub = stub(deps, "getConfig", () => ({
-    frontendUrl: "https://frontend.example.com",
     githubAppId: "12345",
     githubPrivateKey: "test-key",
   }));
@@ -677,7 +646,6 @@ Deno.test("handler - should return 405 for POST requests", async () => {
 
 Deno.test("handler - should return 405 for DELETE requests", async () => {
   const getConfigStub = stub(deps, "getConfig", () => ({
-    frontendUrl: "https://frontend.example.com",
     githubAppId: "12345",
     githubPrivateKey: "test-key",
   }));
