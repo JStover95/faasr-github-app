@@ -44,9 +44,9 @@ This application streamlines the process of uploading workflow files to a forked
    - Enable **Request user authorization (OAuth) during installation**
    - Disable Webhooks
    - Enable necessary permissions:
-     - Repository contents: Read & Write
-     - Repository metadata: Read-only
-     - Workflows: Read & Write
+     - **Actions**: Read & Write
+     - **Repository contents**: Read & Write
+     - **Repository metadata**: Read-only
 3. Create the app
 4. Generate a private key and save it
 5. Generate a client secret and copy it for configuring the backend later
