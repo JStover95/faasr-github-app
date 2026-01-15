@@ -144,12 +144,14 @@ export class WorkflowUploadService {
    *
    * @param session - User session with installation ID and user login
    * @param fileName - Sanitized workflow file name
+   * @param customContainers - Whether to allow custom containers (optional, defaults to false)
    * @returns Registration result with workflow run information (may be undefined if not immediately available)
    * @throws Error if credentials are missing or GitHub operations fail
    */
   async triggerRegistration(
     session: UserSession,
     fileName: string,
+    customContainers?: boolean,
   ): Promise<RegistrationResult> {
     if (!session.repoName) {
       throw new Error("Repository name not found in user session");
@@ -171,6 +173,7 @@ export class WorkflowUploadService {
         DEFAULT_BRANCH,
         {
           workflow_file: fileName,
+          custom_container: String(customContainers ?? false),
         },
       );
 

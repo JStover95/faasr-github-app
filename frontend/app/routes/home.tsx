@@ -1,8 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import type { Route } from "./+types/home";
 import { Header } from "@/components/ui/Header";
 import { Button } from "@/components/ui/Button";
+import { FileInput } from "@/components/ui/FileInput";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { useAuthContext } from "@/contexts/AuthContext/use-auth-context";
 import { useWorkflowsContext } from "@/contexts/WorkflowsContext/use-workflows-context";
 
@@ -19,13 +21,33 @@ export function meta({}: Route.MetaArgs) {
 export const HOME_TEST_IDS = {
   installButton: "home-install-button",
   installMessage: "home-install-message",
+  uploadSection: "home-upload-section",
+  fileInput: "home-file-input",
+  customContainersCheckbox: "home-custom-containers-checkbox",
+  uploadButton: "home-upload-button",
+  uploadStatus: "home-upload-status",
+  registrationStatus: "home-registration-status",
+  workflowRunLink: "home-workflow-run-link",
 } as const;
+
+interface UploadUIState {
+  selectedFile: File | null;
+  fileError: string | null;
+  customContainers: boolean;
+}
 
 export default function Home() {
   const navigate = useNavigate();
   const { state: authState } = useAuthContext();
   const { state: workflowsState, actions: workflowsActions } =
     useWorkflowsContext();
+
+  // Single state object for upload UI
+  const [uploadUIState, setUploadUIState] = useState<UploadUIState>({
+    selectedFile: null,
+    fileError: null,
+    customContainers: false,
+  });
 
   useEffect(() => {
     if (!authState.loading && !authState.isAuthenticated) {
@@ -46,6 +68,21 @@ export default function Home() {
     workflowsState.installationStatus,
     workflowsActions,
   ]);
+
+  // Reset file selection after completion to allow new uploads
+  useEffect(() => {
+    if (
+      workflowsState.registrationStatus === "success" ||
+      workflowsState.registrationStatus === "failed"
+    ) {
+      // Keep showing status but allow new file selection
+      setUploadUIState((prev) => ({
+        ...prev,
+        selectedFile: null,
+        fileError: null,
+      }));
+    }
+  }, [workflowsState.registrationStatus]);
 
   // Don't render until loading is complete
   if (authState.loading) {
@@ -70,6 +107,67 @@ export default function Home() {
 
   const handleInstallClick = () => {
     workflowsActions.initiateInstall();
+  };
+
+  // File selection with JSON validation
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      setUploadUIState((prev) => ({
+        ...prev,
+        selectedFile: null,
+        fileError: null,
+      }));
+      return;
+    }
+
+    // Validate JSON file
+    if (!file.name.endsWith(".json")) {
+      setUploadUIState((prev) => ({
+        ...prev,
+        selectedFile: null,
+        fileError: "Please select a JSON file",
+      }));
+      return;
+    }
+
+    // Validate file size (5MB max)
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setUploadUIState((prev) => ({
+        ...prev,
+        selectedFile: null,
+        fileError: "File too large (max 5MB)",
+      }));
+      return;
+    }
+
+    setUploadUIState((prev) => ({
+      ...prev,
+      selectedFile: file,
+      fileError: null,
+    }));
+  };
+
+  // Checkbox change handler
+  const handleCustomContainersChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setUploadUIState((prev) => ({
+      ...prev,
+      customContainers: event.target.checked,
+    }));
+  };
+
+  // Upload handler
+  const handleUpload = () => {
+    if (!uploadUIState.selectedFile) return;
+
+    workflowsActions.uploadWorkflow(
+      uploadUIState.selectedFile,
+      uploadUIState.customContainers
+    );
   };
 
   return (
@@ -112,19 +210,178 @@ export default function Home() {
           )}
 
           {isInstalled && (
-            <div className="mb-6">
-              <p className="text-lg text-gray-700 dark:text-gray-300 mb-4">
-                GitHub App is installed and ready to use.
-                {workflowsState.installationData?.ghUserLogin && (
-                  <span className="ml-2">
-                    Logged in as{" "}
-                    <span className="font-semibold">
-                      {workflowsState.installationData.ghUserLogin}
+            <>
+              <div className="mb-6">
+                <p className="text-lg text-gray-700 dark:text-gray-300 mb-4">
+                  GitHub App is installed and ready to use.
+                  {workflowsState.installationData?.ghUserLogin && (
+                    <span className="ml-2">
+                      Logged in as{" "}
+                      <span className="font-semibold">
+                        {workflowsState.installationData.ghUserLogin}
+                      </span>
                     </span>
-                  </span>
+                  )}
+                </p>
+              </div>
+
+              {/* Upload Section */}
+              <div
+                className="mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
+                data-testid={HOME_TEST_IDS.uploadSection}
+              >
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  Upload Workflow
+                </h3>
+
+                <div className="mb-4">
+                  <FileInput
+                    accept=".json"
+                    onChange={handleFileChange}
+                    error={uploadUIState.fileError || undefined}
+                    hint="Select a JSON workflow file to upload"
+                    testID={HOME_TEST_IDS.fileInput}
+                    selectedFileName={uploadUIState.selectedFile?.name}
+                    disabled={
+                      workflowsState.uploadStatus === "uploading" ||
+                      workflowsState.registrationStatus === "polling"
+                    }
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <Checkbox
+                    label="Allow custom containers"
+                    checked={uploadUIState.customContainers}
+                    onChange={handleCustomContainersChange}
+                    testID={HOME_TEST_IDS.customContainersCheckbox}
+                    disabled={
+                      workflowsState.uploadStatus === "uploading" ||
+                      workflowsState.registrationStatus === "polling"
+                    }
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <Button
+                    title="Upload Workflow"
+                    onClick={handleUpload}
+                    loading={workflowsState.uploadStatus === "uploading"}
+                    disabled={
+                      !uploadUIState.selectedFile ||
+                      workflowsState.uploadStatus === "uploading" ||
+                      workflowsState.registrationStatus === "polling"
+                    }
+                    testID={HOME_TEST_IDS.uploadButton}
+                    className="max-w-xs"
+                  />
+                </div>
+
+                {/* Upload status display */}
+                {workflowsState.uploadStatus === "uploaded" && (
+                  <div
+                    className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
+                    data-testid={HOME_TEST_IDS.uploadStatus}
+                  >
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      ✓ Upload successful:{" "}
+                      <span className="font-medium">
+                        {workflowsState.uploadedFile?.fileName}
+                      </span>
+                    </p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                      Starting registration...
+                    </p>
+                  </div>
                 )}
-              </p>
-            </div>
+
+                {/* Registration polling status */}
+                {workflowsState.registrationStatus === "polling" && (
+                  <div
+                    className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
+                    data-testid={HOME_TEST_IDS.registrationStatus}
+                  >
+                    <div className="flex items-center">
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600 dark:text-blue-400"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                          Checking registration status...
+                        </p>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                          Status:{" "}
+                          <span className="font-medium capitalize">
+                            {workflowsState.registrationData?.status ||
+                              "pending"}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Success state with workflow run link */}
+                {workflowsState.registrationStatus === "success" && (
+                  <div
+                    className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md"
+                    data-testid={HOME_TEST_IDS.registrationStatus}
+                  >
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">
+                      ✓ Registration complete!
+                    </p>
+                    {workflowsState.registrationData?.workflowRunUrl && (
+                      <a
+                        href={workflowsState.registrationData.workflowRunUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-green-700 dark:text-green-300 hover:text-green-800 dark:hover:text-green-200 underline font-medium"
+                        data-testid={HOME_TEST_IDS.workflowRunLink}
+                      >
+                        View workflow run →
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* Error states */}
+                {(workflowsState.uploadStatus === "error" ||
+                  workflowsState.registrationStatus === "failed" ||
+                  workflowsState.registrationStatus === "error") && (
+                  <div
+                    className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md"
+                    data-testid={HOME_TEST_IDS.uploadStatus}
+                  >
+                    <p className="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
+                      ✗ Error
+                    </p>
+                    <p className="text-sm text-red-700 dark:text-red-300">
+                      {workflowsState.error ||
+                        workflowsState.registrationData?.errorMessage ||
+                        "An error occurred"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           <div className="mt-8">

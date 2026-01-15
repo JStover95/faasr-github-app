@@ -71,7 +71,7 @@ export interface WorkflowsActions {
   /** Initiate GitHub App installation */
   initiateInstall: () => Promise<void>;
   /** Upload workflow file */
-  uploadWorkflow: (file: File) => Promise<void>;
+  uploadWorkflow: (file: File, customContainers?: boolean) => Promise<void>;
   /** Poll registration status */
   pollRegistrationStatus: (fileName: string) => Promise<void>;
   /** Reset state to initial values */

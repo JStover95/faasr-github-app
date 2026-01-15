@@ -572,7 +572,7 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
    * Upload workflow file
    */
   const uploadWorkflow = useCallback(
-    async (file: File) => {
+    async (file: File, customContainers?: boolean) => {
       setState((prev) => ({
         ...prev,
         uploadStatus: "uploading",
@@ -584,6 +584,7 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
         // Workflows function now expects FormData for POST requests
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("custom_containers", String(customContainers ?? false));
 
         const { data, error } = await supabase.functions.invoke("workflows", {
           method: "POST",

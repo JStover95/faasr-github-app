@@ -543,3 +543,171 @@ Deno.test("triggerRegistration - should throw error when repo name missing", asy
     // No stubs to restore
   }
 });
+
+Deno.test("triggerRegistration - should pass custom_container=true when customContainers is true", async () => {
+  const mockOctokit = createMockOctokit();
+  const mockGithubClient = {
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
+  } as any;
+
+  const service = new WorkflowUploadService(mockGithubClient);
+
+  let capturedInputs: Record<string, string> | undefined;
+  const dispatchStub = stub(
+    deps,
+    "triggerWorkflowDispatch",
+    async (
+      _octokit: unknown,
+      _owner: string,
+      _repo: string,
+      _workflowId: string,
+      _ref?: string,
+      inputs?: Record<string, string>,
+    ) => {
+      capturedInputs = inputs;
+      return await Promise.resolve();
+    },
+  );
+
+  mockOctokit.withRestResponse("actions.listWorkflowRuns", () => ({
+    data: {
+      workflow_runs: [
+        {
+          id: 123,
+          html_url: "https://github.com/test/repo/actions/runs/123",
+        },
+      ],
+    },
+  }));
+
+  try {
+    const session: UserSession = {
+      installationId: "123",
+      userLogin: "test-user",
+      userId: 456,
+      repoName: "test-repo",
+      createdAt: new Date(),
+      expiresAt: new Date(),
+    };
+
+    await service.triggerRegistration(session, "test-workflow.json", true);
+
+    assertEquals(capturedInputs?.workflow_file, "test-workflow.json");
+    assertEquals(capturedInputs?.custom_container, "true");
+  } finally {
+    dispatchStub.restore();
+  }
+});
+
+Deno.test("triggerRegistration - should pass custom_container=false when customContainers is false", async () => {
+  const mockOctokit = createMockOctokit();
+  const mockGithubClient = {
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
+  } as any;
+
+  const service = new WorkflowUploadService(mockGithubClient);
+
+  let capturedInputs: Record<string, string> | undefined;
+  const dispatchStub = stub(
+    deps,
+    "triggerWorkflowDispatch",
+    async (
+      _octokit: unknown,
+      _owner: string,
+      _repo: string,
+      _workflowId: string,
+      _ref?: string,
+      inputs?: Record<string, string>,
+    ) => {
+      capturedInputs = inputs;
+      return await Promise.resolve();
+    },
+  );
+
+  mockOctokit.withRestResponse("actions.listWorkflowRuns", () => ({
+    data: {
+      workflow_runs: [
+        {
+          id: 123,
+          html_url: "https://github.com/test/repo/actions/runs/123",
+        },
+      ],
+    },
+  }));
+
+  try {
+    const session: UserSession = {
+      installationId: "123",
+      userLogin: "test-user",
+      userId: 456,
+      repoName: "test-repo",
+      createdAt: new Date(),
+      expiresAt: new Date(),
+    };
+
+    await service.triggerRegistration(session, "test-workflow.json", false);
+
+    assertEquals(capturedInputs?.workflow_file, "test-workflow.json");
+    assertEquals(capturedInputs?.custom_container, "false");
+  } finally {
+    dispatchStub.restore();
+  }
+});
+
+Deno.test("triggerRegistration - should default to custom_container=false when customContainers is undefined", async () => {
+  const mockOctokit = createMockOctokit();
+  const mockGithubClient = {
+    getAuthenticatedOctokit: async () => await Promise.resolve(mockOctokit),
+    // deno-lint-ignore no-explicit-any
+  } as any;
+
+  const service = new WorkflowUploadService(mockGithubClient);
+
+  let capturedInputs: Record<string, string> | undefined;
+  const dispatchStub = stub(
+    deps,
+    "triggerWorkflowDispatch",
+    async (
+      _octokit: unknown,
+      _owner: string,
+      _repo: string,
+      _workflowId: string,
+      _ref?: string,
+      inputs?: Record<string, string>,
+    ) => {
+      capturedInputs = inputs;
+      return await Promise.resolve();
+    },
+  );
+
+  mockOctokit.withRestResponse("actions.listWorkflowRuns", () => ({
+    data: {
+      workflow_runs: [
+        {
+          id: 123,
+          html_url: "https://github.com/test/repo/actions/runs/123",
+        },
+      ],
+    },
+  }));
+
+  try {
+    const session: UserSession = {
+      installationId: "123",
+      userLogin: "test-user",
+      userId: 456,
+      repoName: "test-repo",
+      createdAt: new Date(),
+      expiresAt: new Date(),
+    };
+
+    await service.triggerRegistration(session, "test-workflow.json");
+
+    assertEquals(capturedInputs?.workflow_file, "test-workflow.json");
+    assertEquals(capturedInputs?.custom_container, "false");
+  } finally {
+    dispatchStub.restore();
+  }
+});

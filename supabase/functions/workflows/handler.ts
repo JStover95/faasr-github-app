@@ -28,7 +28,9 @@ export const deps = {
 /**
  * Get user session from Supabase Auth
  */
-export async function getUserSession(req: Request): Promise<UserSession | null> {
+export async function getUserSession(
+  req: Request,
+): Promise<UserSession | null> {
   const supabase = deps.createSupabaseClient(req);
   const { data: { user }, error } = await supabase.auth.getUser();
 
@@ -70,12 +72,17 @@ export async function getUserSession(req: Request): Promise<UserSession | null> 
 export async function parseFormData(req: Request): Promise<{
   file: File | null;
   fileName: string | null;
+  customContainers: boolean | null;
 }> {
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const fileName = file?.name || null;
+  const customContainersValue = formData.get("custom_containers");
+  const customContainers = customContainersValue === null
+    ? null
+    : customContainersValue === "true";
 
-  return { file, fileName };
+  return { file, fileName, customContainers };
 }
 
 /**
@@ -109,7 +116,7 @@ export async function handleUpload(req: Request): Promise<Response> {
 
     console.log("[WORKFLOWS] Parsing FormData");
 
-    const { file, fileName } = await parseFormData(req);
+    const { file, fileName, customContainers } = await parseFormData(req);
 
     if (!file || !fileName) {
       console.warn("[WORKFLOWS] Upload failed: File is required", {
@@ -165,6 +172,7 @@ export async function handleUpload(req: Request): Promise<Response> {
     const registrationResult = await uploadService.triggerRegistration(
       session,
       uploadResult.fileName,
+      customContainers ?? undefined,
     );
 
     console.log("[WORKFLOWS] Registration workflow triggered", {
