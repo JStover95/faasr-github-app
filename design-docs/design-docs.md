@@ -8,6 +8,8 @@ Design docs should be added to over time as new patterns emerge and architectura
 
 - **[Frontend Patterns](./frontend-patterns.md)** - Design patterns and best practices for the Vite/React frontend, including component architecture, state management, and testing strategy.
 
+- **[Backend Integration](./backend-integration.md)** - Patterns for integrating with Supabase Edge Functions from the frontend, including error handling, Supabase error types, and user-friendly error messaging.
+
 - **[Supabase Edge Functions](./supabase.md)** - Design patterns and best practices for Supabase Edge Functions, including error handling, configuration management, and code organization.
 
 - **[Supabase Testing Strategy](./supabase-testing.md)** - Testing patterns and best practices for Supabase Edge Functions, including mock factories, environment management, dependency stubbing, and test structure.
