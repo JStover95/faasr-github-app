@@ -221,7 +221,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
           loading: false,
           user: data.user,
           session: data.session,
-          isAuthenticated: !!data.session,
           error: null,
         }));
       } catch (error: any) {
