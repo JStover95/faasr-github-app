@@ -38,7 +38,7 @@ export const deps = {
  * This handles the GitHub App installation callback.
  */
 export async function handleCallback(req: Request): Promise<Response> {
-  const { frontendUrl, githubAppId, githubPrivateKey } = deps.getConfig();
+  const { githubAppId, githubPrivateKey } = deps.getConfig();
 
   const url = new URL(req.url);
   const installationId = url.searchParams.get("installation_id");
@@ -49,19 +49,17 @@ export async function handleCallback(req: Request): Promise<Response> {
         "[CALLBACK] Callback failed: Missing installation_id parameter",
       );
 
-      const redirectUrl = new URL("/install", frontendUrl);
-      redirectUrl.searchParams.set("error", "missing_installation_id");
-      redirectUrl.searchParams.set(
-        "message",
-        "Missing installation ID. Please try installing again.",
-      );
-
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: redirectUrl.toString(),
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "missing_installation_id",
+          message: "Missing installation ID. Please try installing again.",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
         },
-      });
+      );
     }
 
     console.log("[CALLBACK] Fetching installation information", {
@@ -93,20 +91,18 @@ export async function handleCallback(req: Request): Promise<Response> {
         missingPermissions: permissionCheck.missingPermissions,
       });
 
-      const redirectUrl = new URL("/install", frontendUrl);
-
-      redirectUrl.searchParams.set("error", "missing_permissions");
-      redirectUrl.searchParams.set(
-        "message",
-        "The app needs additional permissions. Please reinstall with the required permissions.",
-      );
-
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: redirectUrl.toString(),
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "missing_permissions",
+          message:
+            "The app needs additional permissions. Please reinstall with the required permissions.",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
         },
-      });
+      );
     }
 
     console.log("[CALLBACK] Permissions validated successfully");
@@ -163,19 +159,18 @@ export async function handleCallback(req: Request): Promise<Response> {
         repoCount: repos.length,
       });
 
-      const redirectUrl = new URL("/install", frontendUrl);
-      redirectUrl.searchParams.set("error", "no_fork_found");
-      redirectUrl.searchParams.set(
-        "message",
-        "No fork of the source repository found. Please fork the repository and try again.",
-      );
-
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: redirectUrl.toString(),
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "no_fork_found",
+          message:
+            "No fork of the source repository found. Please fork the repository and try again.",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
         },
-      });
+      );
     }
 
     console.log("[CALLBACK] Fork repository found", {
@@ -203,19 +198,17 @@ export async function handleCallback(req: Request): Promise<Response> {
         error: error?.message,
       });
 
-      const redirectUrl = new URL("/install", frontendUrl);
-      redirectUrl.searchParams.set("error", "failed_to_get_user");
-      redirectUrl.searchParams.set(
-        "message",
-        "Failed to get user. Please try again.",
-      );
-
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: redirectUrl.toString(),
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "failed_to_get_user",
+          message: "Failed to get user. Please try again.",
+        }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
         },
-      });
+      );
     }
 
     const profileId = data.user.id;
@@ -232,22 +225,18 @@ export async function handleCallback(req: Request): Promise<Response> {
 
     console.log("[CALLBACK] Callback completed successfully");
 
-    // Get frontend URL for redirect
-    const redirectUrl = new URL("/install", frontendUrl);
-    redirectUrl.searchParams.set("success", "true");
-    redirectUrl.searchParams.set("login", installation.account.login);
-
-    console.log("[CALLBACK] Redirecting to frontend", {
-      redirectUrl: redirectUrl.toString(),
-    });
-
-    // Redirect to frontend with success parameters
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: redirectUrl.toString(),
+    // Return success response
+    return new Response(
+      JSON.stringify({
+        success: true,
+        login: installation.account.login,
+        message: "GitHub App installed successfully!",
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
       },
-    });
+    );
   } catch (error) {
     console.error("[CALLBACK] Callback error", {
       installationId: installationId || "unknown",
@@ -276,16 +265,17 @@ export async function handleCallback(req: Request): Promise<Response> {
       }
     }
 
-    const redirectUrl = new URL("/install", frontendUrl);
-    redirectUrl.searchParams.set("error", errorCode);
-    redirectUrl.searchParams.set("message", errorMessage);
-
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: redirectUrl.toString(),
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: errorCode,
+        message: errorMessage,
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
       },
-    });
+    );
   }
 }
 

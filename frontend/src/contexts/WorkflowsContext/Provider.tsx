@@ -13,6 +13,11 @@ import {
   type PropsWithChildren,
 } from "react";
 import {
+  FunctionsHttpError,
+  FunctionsRelayError,
+  FunctionsFetchError,
+} from "@supabase/supabase-js";
+import {
   WorkflowsContext,
   type WorkflowsContextValue,
   type WorkflowsState,
@@ -25,6 +30,182 @@ import { useToastContext } from "../ToastContext/use-toast-context";
 
 const POLL_INTERVAL_MS = 3000; // 3 seconds
 const POLL_TIMEOUT_MS = 300000; // 5 minutes (100 iterations)
+
+// Error constants
+const INSTALL_ERRORS = {
+  missingInstallationId:
+    "Missing installation ID. Please try installing again.",
+  missingPermissions:
+    "The app needs additional permissions. Please reinstall with the required permissions.",
+  noForkFound:
+    "No fork of the source repository found. Please fork the repository and try again.",
+  rateLimit: "Too many requests. Please try again in a few minutes.",
+  failedToGetUser: "Failed to get user. Please try again.",
+  installationFailed: "Installation failed. Please try again.",
+  default: "Failed to initiate installation.",
+} as const;
+
+const CHECK_INSTALLATION_ERRORS = {
+  failedToGetUser: "Failed to get user.",
+  default: "Failed to check installation status.",
+} as const;
+
+const UPLOAD_ERRORS = {
+  invalidResponse: "Invalid response from upload.",
+  uploadFailed: "Upload failed.",
+  default: "Failed to upload workflow.",
+} as const;
+
+const REGISTRATION_ERRORS = {
+  invalidResponse: "Invalid response from status check.",
+  notFound: "Workflow run not found yet.",
+  timeout: "Registration status check timed out. Please check manually.",
+  default: "Failed to check registration status.",
+} as const;
+
+/**
+ * Handle errors from Supabase function invocations
+ */
+const handleFunctionError = async (
+  error: unknown
+): Promise<{ message: string; errorCode?: string }> => {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const errorData = await error.context.json();
+      const errorCode = errorData.error || errorData.errorCode;
+      const message = errorData.message || errorData.error || error.message;
+
+      // Map callback-specific error codes
+      if (errorCode === "missing_installation_id") {
+        return { message: INSTALL_ERRORS.missingInstallationId, errorCode };
+      }
+      if (errorCode === "missing_permissions") {
+        return { message: INSTALL_ERRORS.missingPermissions, errorCode };
+      }
+      if (errorCode === "no_fork_found") {
+        return { message: INSTALL_ERRORS.noForkFound, errorCode };
+      }
+      if (errorCode === "rate_limit") {
+        return { message: INSTALL_ERRORS.rateLimit, errorCode };
+      }
+      if (errorCode === "failed_to_get_user") {
+        return { message: INSTALL_ERRORS.failedToGetUser, errorCode };
+      }
+      if (errorCode === "installation_failed") {
+        return { message: INSTALL_ERRORS.installationFailed, errorCode };
+      }
+
+      return { message, errorCode };
+    } catch {
+      return { message: error.message || INSTALL_ERRORS.default };
+    }
+  } else if (error instanceof FunctionsRelayError) {
+    return { message: error.message || INSTALL_ERRORS.default };
+  } else if (error instanceof FunctionsFetchError) {
+    return { message: error.message || INSTALL_ERRORS.default };
+  } else if (error instanceof Error) {
+    return { message: error.message || INSTALL_ERRORS.default };
+  }
+  return { message: INSTALL_ERRORS.default };
+};
+
+/**
+ * Handle installation errors
+ */
+const handleInstallError = async (error: unknown): Promise<string> => {
+  const { message } = await handleFunctionError(error);
+  return message;
+};
+
+/**
+ * Handle check installation errors
+ */
+const handleCheckInstallationError = (error: unknown): string => {
+  if (error instanceof Error) {
+    if (error.message.includes("Failed to get user")) {
+      return CHECK_INSTALLATION_ERRORS.failedToGetUser;
+    }
+    return error.message || CHECK_INSTALLATION_ERRORS.default;
+  }
+  return CHECK_INSTALLATION_ERRORS.default;
+};
+
+/**
+ * Handle upload errors
+ */
+const handleUploadError = async (error: unknown): Promise<string> => {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const errorData = await error.context.json();
+      return (
+        errorData.message ||
+        errorData.error ||
+        error.message ||
+        UPLOAD_ERRORS.default
+      );
+    } catch {
+      return error.message || UPLOAD_ERRORS.default;
+    }
+  } else if (error instanceof FunctionsRelayError) {
+    return error.message || UPLOAD_ERRORS.default;
+  } else if (error instanceof FunctionsFetchError) {
+    return error.message || UPLOAD_ERRORS.default;
+  } else if (error instanceof Error) {
+    return error.message || UPLOAD_ERRORS.default;
+  }
+  return UPLOAD_ERRORS.default;
+};
+
+/**
+ * Handle registration status check errors
+ */
+const handleRegistrationError = async (
+  error: unknown
+): Promise<{ message: string; isNotFound: boolean }> => {
+  if (error instanceof FunctionsHttpError) {
+    // Check for 404 (workflow run not found yet)
+    if (error.context.status === 404) {
+      return { message: REGISTRATION_ERRORS.notFound, isNotFound: true };
+    }
+    try {
+      const errorData = await error.context.json();
+      const message =
+        errorData.message ||
+        errorData.error ||
+        error.message ||
+        REGISTRATION_ERRORS.default;
+      return { message, isNotFound: false };
+    } catch {
+      return {
+        message: error.message || REGISTRATION_ERRORS.default,
+        isNotFound: false,
+      };
+    }
+  } else if (error instanceof FunctionsRelayError) {
+    return {
+      message: error.message || REGISTRATION_ERRORS.default,
+      isNotFound: false,
+    };
+  } else if (error instanceof FunctionsFetchError) {
+    return {
+      message: error.message || REGISTRATION_ERRORS.default,
+      isNotFound: false,
+    };
+  } else if (error instanceof Error) {
+    // Check if it's a 404 (workflow run not found yet)
+    if (
+      error.message?.includes("404") ||
+      error.message?.includes("not found")
+    ) {
+      return { message: REGISTRATION_ERRORS.notFound, isNotFound: true };
+    }
+    return {
+      message: error.message || REGISTRATION_ERRORS.default,
+      isNotFound: false,
+    };
+  }
+  return { message: REGISTRATION_ERRORS.default, isNotFound: false };
+};
 
 /**
  * Type for installation response from get_gh_installation RPC function
@@ -156,15 +337,14 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
         }));
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to check installation";
+      const errorMessage = handleCheckInstallationError(error);
       setState((prev) => ({
         ...prev,
         installationStatus: "error",
         loading: false,
         error: errorMessage,
       }));
-      toastActions.showToast("Failed to check installation status", "error");
+      toastActions.showToast(errorMessage, "error");
     }
   }, [supabase, toastActions]);
 
@@ -179,12 +359,20 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
     }));
 
     try {
+      // Install function now routes by HTTP method (GET only)
       const { data, error } = await supabase.functions.invoke("install", {
-        body: { path: "/auth/install" },
+        method: "GET",
       });
 
       if (error) {
-        throw new Error(error.message || "Failed to initiate installation");
+        const errorMessage = await handleInstallError(error);
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          error: errorMessage,
+        }));
+        toastActions.showToast(errorMessage, "error");
+        return;
       }
 
       if (
@@ -197,13 +385,16 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
         // Redirect to GitHub
         window.location.href = data.redirectUrl as string;
       } else {
-        throw new Error("Failed to get installation URL");
+        const errorMessage = INSTALL_ERRORS.default;
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          error: errorMessage,
+        }));
+        toastActions.showToast(errorMessage, "error");
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to initiate installation";
+      const errorMessage = await handleInstallError(error);
       setState((prev) => ({
         ...prev,
         loading: false,
@@ -237,22 +428,25 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
 
       const checkStatus = async () => {
         try {
-          const { data, error } = await supabase.functions.invoke("workflows", {
-            body: { path: `/workflows/status/${encodeURIComponent(fileName)}` },
-          });
+          // Workflows function now uses query params for GET requests
+          const queryParams = new URLSearchParams({
+            filename: fileName,
+          }).toString();
+          const { data, error } = await supabase.functions.invoke(
+            `workflows?${queryParams}`,
+            {
+              method: "GET",
+            }
+          );
 
           if (error) {
-            // Check if it's a 404 (workflow run not found yet)
-            if (
-              error.message?.includes("404") ||
-              error.message?.includes("not found")
-            ) {
-              // Workflow run not found yet, continue polling
+            const { message, isNotFound } =
+              await handleRegistrationError(error);
+            // If it's a 404 (workflow run not found yet), continue polling
+            if (isNotFound) {
               return;
             }
-            throw new Error(
-              error.message || "Failed to check registration status"
-            );
+            throw new Error(message);
           }
 
           if (!data || typeof data !== "object") {
@@ -387,30 +581,18 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
       }));
 
       try {
-        // Read file as array buffer for Supabase functions
-        const fileBuffer = await file.arrayBuffer();
-        const fileBase64 = btoa(
-          String.fromCharCode(...new Uint8Array(fileBuffer))
-        );
+        // Workflows function now expects FormData for POST requests
+        const formData = new FormData();
+        formData.append("file", file);
 
         const { data, error } = await supabase.functions.invoke("workflows", {
-          body: {
-            path: "/workflows/upload",
-            file: {
-              name: file.name,
-              content: fileBase64,
-              type: file.type,
-            },
-          },
+          method: "POST",
+          body: formData,
         });
 
         if (error) {
-          throw new Error(
-            (error as any).error ||
-              (error as any).details ||
-              error.message ||
-              "Failed to upload workflow"
-          );
+          const errorMessage = await handleUploadError(error);
+          throw new Error(errorMessage);
         }
 
         if (!data || typeof data !== "object") {
@@ -446,8 +628,7 @@ export function WorkflowsProvider({ children }: PropsWithChildren) {
           );
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to upload workflow";
+        const errorMessage = await handleUploadError(error);
         setState((prev) => ({
           ...prev,
           uploadStatus: "error",

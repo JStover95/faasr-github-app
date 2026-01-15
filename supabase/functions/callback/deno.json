@@ -1,5 +1,8 @@
 {
   "imports": {
-    "@std/assert": "jsr:@std/assert@1"
+    "@octokit/app": "npm:@octokit/app@16.1.2",
+    "@octokit/rest": "npm:@octokit/rest@22.0.1",
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.90.1",
+    "jsonwebtoken": "npm:jsonwebtoken@^9.0.3"
   }
 }
