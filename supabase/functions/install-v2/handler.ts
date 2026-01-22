@@ -42,7 +42,9 @@ export function handleInstallV2(): Response {
     }),
     {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
     },
   );
 }
@@ -72,7 +74,10 @@ export function handler(req: Request): Response {
       });
       return new Response(
         JSON.stringify({ success: false, error: "Method not allowed" }),
-        { status: 405, headers: { "Content-Type": "application/json" } },
+        {
+          status: 405,
+          headers: { "Content-Type": "application/json" },
+        },
       );
     }
   } catch (error) {
@@ -84,7 +89,10 @@ export function handler(req: Request): Response {
     });
     return new Response(
       JSON.stringify({ success: false, error: "Internal server error" }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
     );
   }
 }

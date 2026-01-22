@@ -5,16 +5,19 @@
  */
 
 // GitHub App authentication
-export { App } from "@octokit/app";
+export { App } from "npm:@octokit/app@^16.1.2";
 
 // GitHub REST API client
-export { Octokit } from "@octokit/rest";
+export { Octokit } from "npm:@octokit/rest@^22.0.1";
 
 // JWT signing for GitHub App authentication
-export { sign } from "jsonwebtoken";
+export { sign } from "npm:jsonwebtoken@^9.0.3";
 
 // Supabase client for Auth Admin API
-export { createClient, type SupabaseClient } from "@supabase/supabase-js";
+export {
+  createClient,
+  type SupabaseClient,
+} from "npm:@supabase/supabase-js@^2.90.1";
 
 // Jose library for JWT signing and verification
-export { jwtVerify, SignJWT } from "jose";
+export { jwtVerify, SignJWT } from "npm:jose@^6.1.3";

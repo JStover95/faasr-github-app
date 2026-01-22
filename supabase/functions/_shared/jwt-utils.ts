@@ -7,7 +7,7 @@
  * @see design-docs/supabase.md - Dependency injection pattern
  */
 
-import { jwtVerify, SignJWT } from "jose";
+import { jwtVerify, SignJWT } from "./deps.ts";
 
 export interface JWTPayload {
   installation_id: string;

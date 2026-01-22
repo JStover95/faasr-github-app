@@ -5,5 +5,19 @@
  */
 
 import { handler } from "./handler.ts";
+import { setCorsHeaders } from "../_shared/cors.ts";
+import { getConfig } from "./config.ts";
 
-Deno.serve(handler);
+// No dependency injection for function entrypoints
+
+Deno.serve((req) => {
+  if (req.method === "OPTIONS") {
+    const response = new Response("OK");
+    setCorsHeaders(response, getConfig().corsOptions);
+    return response;
+  }
+
+  const response = handler(req);
+  setCorsHeaders(response, getConfig().corsOptions);
+  return response;
+});

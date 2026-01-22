@@ -7,12 +7,15 @@
  * @see design-docs/supabase.md - Config caching pattern
  */
 
+import type { CORSOptions } from "../_shared/cors.ts";
+
 export interface CallbackV2Config {
   githubClientId: string;
   githubClientSecret: string;
   githubAppId: string;
   githubPrivateKey: string;
   jwtSecret: string;
+  corsOptions?: CORSOptions;
 }
 
 let configCache: CallbackV2Config | null = null;
@@ -55,6 +58,18 @@ export function getConfig(): CallbackV2Config {
     githubPrivateKey,
     jwtSecret,
   };
+
+  const corsOrigin = Deno.env.get("CORS_ORIGIN");
+  const corsHeaders = Deno.env.get("CORS_HEADERS");
+  const corsCredentials = Deno.env.get("CORS_CREDENTIALS");
+
+  if (corsOrigin || corsHeaders || corsCredentials) {
+    configCache.corsOptions = {
+      origin: corsOrigin,
+      headers: corsHeaders,
+      credentials: corsCredentials,
+    };
+  }
 
   return configCache;
 }

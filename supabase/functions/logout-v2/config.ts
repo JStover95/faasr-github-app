@@ -1,7 +1,7 @@
 /**
- * Auth Status V2 Config
+ * Logout V2 Config
  *
- * Configuration management for auth-status-v2 edge function.
+ * Configuration management for logout-v2 edge function.
  * Uses caching pattern for performance.
  *
  * @see design-docs/supabase.md - Config caching pattern
@@ -9,31 +9,22 @@
 
 import type { CORSOptions } from "../_shared/cors.ts";
 
-export interface AuthStatusV2Config {
-  jwtSecret: string;
+export interface LogoutV2Config {
   corsOptions?: CORSOptions;
 }
 
-let configCache: AuthStatusV2Config | null = null;
+let configCache: LogoutV2Config | null = null;
 
 export function clearCache(): void {
   configCache = null;
 }
 
-export function getConfig(): AuthStatusV2Config {
+export function getConfig(): LogoutV2Config {
   if (configCache) {
     return configCache;
   }
 
-  const jwtSecret = Deno.env.get("JWT_SECRET");
-
-  if (!jwtSecret) {
-    throw new Error("Missing environment variable: JWT_SECRET");
-  }
-
-  configCache = {
-    jwtSecret,
-  };
+  configCache = {};
 
   const corsOrigin = Deno.env.get("CORS_ORIGIN");
   const corsHeaders = Deno.env.get("CORS_HEADERS");
