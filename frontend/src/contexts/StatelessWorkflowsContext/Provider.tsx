@@ -121,11 +121,15 @@ export function StatelessWorkflowsProvider({ children }: PropsWithChildren) {
     }));
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${supabaseUrl}/functions/v1/install-v2`, {
-        method: "GET",
-        credentials: "include",
-      });
+      const functionsEndpoint = import.meta.env
+        .VITE_SUPABASE_FUNCTIONS_ENDPOINT;
+      const response = await fetch(
+        `${functionsEndpoint}/functions/v1/install-v2`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to get install URL");
@@ -174,12 +178,13 @@ export function StatelessWorkflowsProvider({ children }: PropsWithChildren) {
 
       const checkStatus = async () => {
         try {
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const functionsEndpoint = import.meta.env
+            .VITE_SUPABASE_FUNCTIONS_ENDPOINT;
           const queryParams = new URLSearchParams({
             filename: fileName,
           }).toString();
           const response = await fetch(
-            `${supabaseUrl}/functions/v1/workflows-v2?${queryParams}`,
+            `${functionsEndpoint}/functions/v1/workflows-v2?${queryParams}`,
             {
               method: "GET",
               credentials: "include",
@@ -329,13 +334,14 @@ export function StatelessWorkflowsProvider({ children }: PropsWithChildren) {
       }));
 
       try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const functionsEndpoint = import.meta.env
+          .VITE_SUPABASE_FUNCTIONS_ENDPOINT;
         const formData = new FormData();
         formData.append("file", file);
         formData.append("custom_containers", String(customContainers ?? false));
 
         const response = await fetch(
-          `${supabaseUrl}/functions/v1/workflows-v2`,
+          `${functionsEndpoint}/functions/v1/workflows-v2`,
           {
             method: "POST",
             credentials: "include",

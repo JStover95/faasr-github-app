@@ -89,12 +89,13 @@ export default function V2Callback() {
     // Process the callback
     const processCallback = async () => {
       try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const functionsEndpoint = import.meta.env
+          .VITE_SUPABASE_FUNCTIONS_ENDPOINT;
         const queryParams = new URLSearchParams({
           code,
         }).toString();
         const response = await fetch(
-          `${supabaseUrl}/functions/v1/callback-v2?${queryParams}`,
+          `${functionsEndpoint}/functions/v1/callback-v2?${queryParams}`,
           {
             method: "GET",
             credentials: "include", // Include cookies

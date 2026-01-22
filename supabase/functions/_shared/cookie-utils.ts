@@ -14,10 +14,16 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
  * @param token - JWT token to store in cookie
  */
 export function setAuthCookie(response: Response, token: string): void {
-  const cookieValue =
-    `${COOKIE_NAME}=${token}; Path=/; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; SameSite=Strict; Secure`;
-
-  response.headers.set("Set-Cookie", cookieValue);
+  if (Deno.env.get("DEV_INSECURE_COOKIES") === "true") {
+    console.warn("Setting insecure cookie in development mode!");
+    const cookieValue =
+      `${COOKIE_NAME}=${token}; Path=/; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; SameSite=Lax; Secure`;
+    response.headers.set("Set-Cookie", cookieValue);
+  } else {
+    const cookieValue =
+      `${COOKIE_NAME}=${token}; Path=/; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; SameSite=Strict; Secure`;
+    response.headers.set("Set-Cookie", cookieValue);
+  }
 }
 
 /**

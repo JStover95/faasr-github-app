@@ -46,9 +46,10 @@ export function StatelessAuthProvider({ children }: PropsWithChildren) {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const functionsEndpoint = import.meta.env
+        .VITE_SUPABASE_FUNCTIONS_ENDPOINT;
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/auth-status-v2`,
+        `${functionsEndpoint}/functions/v1/auth-status-v2`,
         {
           method: "GET",
           credentials: "include", // Include cookies
@@ -96,11 +97,15 @@ export function StatelessAuthProvider({ children }: PropsWithChildren) {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${supabaseUrl}/functions/v1/logout-v2`, {
-        method: "POST",
-        credentials: "include", // Include cookies
-      });
+      const functionsEndpoint = import.meta.env
+        .VITE_SUPABASE_FUNCTIONS_ENDPOINT;
+      const response = await fetch(
+        `${functionsEndpoint}/functions/v1/logout-v2`,
+        {
+          method: "POST",
+          credentials: "include", // Include cookies
+        }
+      );
 
       if (response.ok) {
         setState({
