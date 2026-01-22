@@ -6,7 +6,7 @@ export interface CORSOptions {
 
 export const DEFAULT_CORS_HEADERS = {
   origin: "*",
-  headers: "authorization, x-client-info, apikey, content-type",
+  headers: "authorization, x-client-info, apikey, content-type, set-cookie",
   credentials: "true",
 } as const;
 

@@ -15,11 +15,9 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
  */
 export function setAuthCookie(response: Response, token: string): void {
   const cookieValue =
-    `${COOKIE_NAME}=${token}; Path=/; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; SameSite=Lax${
-      // Only set Secure flag in production (HTTPS)
-      Deno.env.get("DENO_ENV") === "production" ? "; Secure" : ""}`;
+    `${COOKIE_NAME}=${token}; Path=/; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; SameSite=Lax; Secure`;
 
-  response.headers.append("Set-Cookie", cookieValue);
+  response.headers.set("Set-Cookie", cookieValue);
 }
 
 /**
