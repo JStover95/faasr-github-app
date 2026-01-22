@@ -38,7 +38,10 @@ export function StatelessAuthProvider({ children }: PropsWithChildren) {
 
   // Check auth on mount
   useEffect(() => {
-    checkAuth();
+    // Don't check in callback route
+    if (window.location.pathname !== "/v2/callback") {
+      checkAuth();
+    }
   }, []);
 
   // ACTIONS with useCallback for stability
