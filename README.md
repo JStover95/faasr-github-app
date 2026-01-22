@@ -64,9 +64,16 @@ This application streamlines the process of uploading workflow files to a forked
    GITHUB_CLIENT_SECRET=your_client_secret
    GITHUB_PRIVATE_KEY="your_private_key"
    GITHUB_INSTALLATION_URL=https://github.com/apps/<your-app-name>/installations/new
+   
+   # V2 Stateless Flow Configuration (optional)
+   JWT_SECRET=your_256_bit_secret_key_here_use_openssl_rand_hex_32
+   GITHUB_OAUTH_CALLBACK_URL_V2=http://localhost:5173/v2/callback
    ```
 
-   **Note:** `GITHUB_PRIVATE_KEY` must be the contents of the private key that you downloaded when creating your app.
+   **Note:**
+   - `GITHUB_PRIVATE_KEY` must be the contents of the private key that you downloaded when creating your app.
+   - For V2 stateless flow, generate a JWT secret: `openssl rand -hex 32`
+   - `GITHUB_OAUTH_CALLBACK_URL_V2` should point to your v2 callback route
 
 2. Open a terminal the `supabase` directory.
 
@@ -113,12 +120,37 @@ This application streamlines the process of uploading workflow files to a forked
 
 ## Usage
 
+### V1 Flow (Database-backed)
+
 1. Open your browser and navigate to `http://localhost:5173`
-2. Log in with your GitHub account
+2. Log in with your GitHub account (or create an account)
 3. Click "Install" to install the GitHub App on your forked repository
 4. Upload a workflow file using the file upload interface
 5. Monitor the workflow registration process
 6. View completed workflow runs or upload additional workflows
+
+### V2 Stateless Flow (Experimental)
+
+The `/v2/` routes demonstrate a stateless, cookie-based authentication flow:
+
+- **No user accounts or password management** - Users authenticate directly via GitHub OAuth
+- **No database storage** - Installation data is stored in signed JWT cookies
+- **7-day cookie expiration** - Sessions expire after 7 days
+- **Same functionality** - Upload and manage workflows just like V1
+
+**To use V2:**
+
+1. Open your browser and navigate to `http://localhost:5173/v2`
+2. Click "Get Started" or "Install GitHub App"
+3. Authorize with GitHub (no account creation needed)
+4. Upload workflow files as normal
+
+**Key differences from V1:**
+
+- No signup/login pages
+- Session data in cookies instead of database
+- Simpler authentication flow
+- No user management features
 
 ## Project Structure
 
